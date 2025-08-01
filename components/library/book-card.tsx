@@ -3,46 +3,8 @@ import { Link } from "expo-router";
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-// type BookProps {
-//     book: Audiobook;
-//     onDownload: (bookId: number) => void
-//     isPlaying: boolean,
-//     downloaded: boolean
-//     onPlay: (bookId: number) => void
-// }
 
-type BookProps = {
-    book: Audiobook;
-}
-
-function BookCard({ book }: BookProps) {
-
-
-    // const renderActionButton = () => {
-    //     if (!downloaded) {
-    //         return (
-    //             <TouchableOpacity style={styles.button} onPress={() => onDownload(book.id)}>
-    //                 <Text style={styles.buttonText}>Download</Text>
-    //             </TouchableOpacity>
-    //         );
-    //     }
-    //     else if (isPlaying) {
-    //         return (
-    //             <TouchableOpacity style={[styles.button, styles.resumeButton]} onPress={onResume}>
-    //                 <Text style={styles.buttonText}>▶ Resume</Text>
-    //             </TouchableOpacity>
-    //         );
-    //     }
-    //     else {
-    //         return (
-    //             <TouchableOpacity style={styles.button} onPress={() => onPlay(book.id)}>
-    //                 <Text style={styles.buttonText}>Play</Text>
-    //             </TouchableOpacity>
-    //         );
-    //     }
-    // };
-
-
+function BookCard({ book }: { book: Audiobook }) {
     return (
         <Link
             href={{

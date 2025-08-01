@@ -69,19 +69,24 @@ export async function downloadAndUnzip(bookId: number) {
 }
 
 export async function listFilesRecursively(path: string): Promise<string[]> {
-    const entries = await FileSystem.readDirectoryAsync(path);
-    const result: string[] = [];
-    for (const entry of entries) {
-        const fullPath = path + (path.endsWith("/") ? "" : "/") + entry;
-        const info = await FileSystem.getInfoAsync(fullPath);
-        if (info.isDirectory) {
-            const sub = await listFilesRecursively(fullPath + "/");
-            result.push(...sub);
-        } else {
-            result.push(fullPath);
+    try {
+        const entries = await FileSystem.readDirectoryAsync(path);
+        const result: string[] = [];
+        for (const entry of entries) {
+            const fullPath = path + (path.endsWith("/") ? "" : "/") + entry;
+            const info = await FileSystem.getInfoAsync(fullPath);
+            if (info.isDirectory) {
+                const sub = await listFilesRecursively(fullPath + "/");
+                result.push(...sub);
+            } else {
+                result.push(fullPath);
+            }
         }
+        return result;
+    } catch (e) {
+        console.error(e)
+        return [] as string[]
     }
-    return result;
 }
 
 export async function removeLocalBook(bookId: number) {
