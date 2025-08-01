@@ -1,3 +1,8 @@
+import * as FileSystem from "expo-file-system";
+
+export const AUDIO_EXTS = [".mp3", ".m4b", ".m4a", ".aac", ".wav", ".ogg"];
+export const ROOT = FileSystem.documentDirectory + "audiobooks/";
+
 const tintColorLight = '#2f95dc';
 const tintColorDark = '#fff';
 
