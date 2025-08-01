@@ -41,11 +41,11 @@ export async function fetchBooks(): Promise<BooksResponse> {
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
     return await res.json();
 }
+
 export async function fetchBookFilesData(id: number) {
     const res = await fetch(`${API_URL}/file_metadata/${id}`);
     return await res.json();
 }
-
 
 const ROOT = FileSystem.documentDirectory + "audiobooks/";
 
@@ -64,7 +64,7 @@ export async function downloadAndUnzip(bookId: number) {
     await unzip(zipPath, destPath);
     await FileSystem.deleteAsync(zipPath, { idempotent: false })
     const files = await listFilesRecursively(destPath);
-    console.log(files)
+    // console.log(files)
     return { dir: destPath, files };
 }
 

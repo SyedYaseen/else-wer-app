@@ -1,3 +1,4 @@
+import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
 import { downloadAndUnzip, fetchBookFilesData, listFilesRecursively, removeLocalBook } from '@/data/api';
 import { deleteBook, FileRow, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/db';
@@ -5,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, Button, Image, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
-
+import { useRouter } from 'expo-router'
 type BookParams = {
     id: string;
     title: string;
@@ -18,6 +19,8 @@ export default function BookDetails() {
     const [isDownloading, setIsDownloading] = useState(false)
     const [isDownloaded, setIsDownloaded] = useState(false)
     const [files, setFiles] = useState<FileRow[]>()
+    const router = useRouter()
+
     useEffect(() => {
         let isMounted = true;
 
@@ -46,7 +49,7 @@ export default function BookDetails() {
 
     const handleDownload = async () => {
         try {
-            await handleDelete(bookId)
+            await handleDelete()
 
             setIsDownloading(true);
 
@@ -68,7 +71,7 @@ export default function BookDetails() {
         }
     };
 
-    const handleDelete = async (bookId: number) => {
+    const handleDelete = async () => {
         try {
             await deleteBook(bookId)
             await removeLocalBook(bookId)
@@ -76,6 +79,10 @@ export default function BookDetails() {
         } catch (err) {
             console.error(`Failed to delete ${bookId}:`, err);
         }
+    }
+
+    const handlePlay = async () => {
+        router.push(`/player/${id}`)
     }
 
     return (
@@ -95,16 +102,22 @@ export default function BookDetails() {
                     <Text style={styles.authorText}>{author}</Text>
                 </View>
                 <View style={styles.actions}>
-                    {!isDownloaded ?
+                    {isDownloading && <LoadingSpinner />}
+                    {!isDownloaded && !isDownloading ?
                         <TouchableOpacity onPress={handleDownload}>
                             <MaterialIcons name='download' size={40} color="#555555" />
                         </TouchableOpacity> :
 
-                        <TouchableOpacity onPress={() => console.log("Playing...")}>
+                        <TouchableOpacity onPress={handlePlay}>
                             <MaterialIcons name='play-circle' size={40} color="#555555" />
-                        </TouchableOpacity>}
-                    <TouchableOpacity onPress={() => console.log("Completed...")}>
+                        </TouchableOpacity>
+
+                    }
+                    {/* <TouchableOpacity onPress={() => console.log("Completed...")}>
                         <MaterialIcons name='check-circle' size={40} color="#555555" />
+                    </TouchableOpacity> */}
+                    <TouchableOpacity onPress={handleDelete}>
+                        <MaterialIcons name='delete' size={40} color="#FF5522" />
                     </TouchableOpacity>
                 </View>
             </View>
