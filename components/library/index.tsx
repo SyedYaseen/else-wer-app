@@ -14,6 +14,10 @@ function Library() {
     const [downloadedFiles, setDownloadedFiles] = useState<Record<number, FileRow[]>>({});
     const player = useAudioPlayer();
 
+    const downloadBook: (bookId: number) => void = (bookId: number) => {
+        console.log("Downloading", bookId)
+    }
+
     useEffect(() => {
         fetchBooks().then(async (data) => {
             setBooks(data.books);
@@ -32,7 +36,6 @@ function Library() {
             playsInSilentModeIOS: true,
             staysActiveInBackground: false,
         });
-
     }, []);
 
 
