@@ -1,16 +1,30 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { useLocalSearchParams } from 'expo-router';
-import { Audiobook, getBook } from '@/data/db';
+import { getBook, getFilesForBook } from '@/data/database/audiobook-repo';
+import { Audiobook, FileRow, } from '@/data/database/models';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useAudioPlayer } from '@/components/hooks/useAudioplayer';
+import { Audio } from "expo-av";
+import { getProgressForBookLcl } from '@/data/database/sync-repo';
+import { getBookProgressServer } from '@/data/api/api';
 
 export default function Player() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const bookId = parseInt(id)
     const [book, setBook] = useState<Audiobook | null>(null)
+    const [files, setFiles] = useState<FileRow[]>()
+
+    const player = useAudioPlayer()
 
     useEffect(() => {
         getBook(bookId).then(book => setBook(book))
+        getFilesForBook(bookId).then(files => setFiles(files))
+
+        Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: false,
+        });
     }, [id])
 
     if (book === null) return (
@@ -19,8 +33,19 @@ export default function Player() {
         </View>
     )
 
-    const handlePlay = () => {
-        console.log("Playing", book.title)
+    const handlePlay = async () => {
+        try {
+
+
+            const lastPosLcl = await getProgressForBookLcl(bookId)
+
+            const lastPosServer = await getBookProgressServer(1, bookId)
+            console.log(lastPosLcl, lastPosServer)
+        } catch (e) {
+            console.log(e)
+        }
+
+        // files?.forEach(f => console.log(f.file_id, f.file_name))
     }
 
     const handleRewind = () => {
@@ -101,7 +126,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        // backgroundColor: '#563422',
         flexDirection: 'row',
         gap: 40,
     },

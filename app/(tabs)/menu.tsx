@@ -1,12 +1,18 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { resetDb } from '@/data/database/utils';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function MenuTab() {
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>Menu Screen</Text>
+
       </View>
       <View style={styles.content}>
+        <Pressable>
+          <MaterialIcons style={{ color: "#FFF" }} name='cancel' size={48} onPress={resetDb} />
+        </Pressable>
         <Text style={styles.text}>Menu items will appear here</Text>
       </View>
     </View>

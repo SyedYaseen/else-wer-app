@@ -1,15 +1,16 @@
 
 import Library from '@/components/library';
 import { AUDIO_EXTS, ROOT } from '@/constants/constants';
-
-import { downloadAndUnzip, fetchBookFilesData, fetchBooks, getProgress as getFileServerProgress, removeLocalBook } from '@/data/api';
-import { Audiobook, FileRow, getFileProgress as getFileLocalProgress, getFilesForBook, markBookDownloaded, upsertAudiobooks, upsertFiles } from '@/data/db';
+import { downloadAndUnzip, fetchBookFilesData, fetchBooks, getFileProgressServer as getFileServerProgress, removeLocalBook } from '@/data/api/api';
+import { getFilesForBook, markBookDownloaded, upsertAudiobooks, upsertFiles } from '@/data/database/audiobook-repo';
+import { getFileProgress as getFileLocalProgress } from '@/data/database/sync-repo';
+import { Audiobook, FileRow } from '@/data/database/models';
 import { useAudioPlayer } from '@/components/hooks/useAudioplayer';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export type BooksResponse = {
   books: Audiobook[];

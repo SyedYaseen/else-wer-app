@@ -1,3 +1,4 @@
+import { login } from '@/data/api/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -12,15 +13,9 @@ export default function Login() {
     const handleLogin = async () => {
         try {
             console.log(`${server}/api/login`, username, password)
-            const res = await fetch(`${server}/api/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
 
-            if (!res.ok) throw new Error('Login failed');
+            const data = await login(server, username, password)
 
-            const data = await res.json();
             await AsyncStorage.setItem('token', data.token);
             await AsyncStorage.setItem('server', server);
             router.replace('/');

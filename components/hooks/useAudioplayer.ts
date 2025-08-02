@@ -1,5 +1,5 @@
-import { saveProgress } from "@/data/api";
-import { setFileProgress } from "@/data/db";
+import { saveProgress } from "@/data/api/api";
+import { setFileProgress } from "@/data/database/sync-repo";
 import { Audio, AVPlaybackStatusSuccess } from "expo-av";
 import { useCallback, useEffect, useRef, useState } from "react";
 export function useAudioPlayer() {

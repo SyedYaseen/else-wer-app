@@ -1,32 +1,22 @@
-import { BooksResponse } from "@/app/(tabs)/library";
+import { BooksResponse } from '@/app/(tabs)';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from "expo-file-system";
 import { unzip } from "react-native-zip-archive";
-import { deleteBook } from "./db";
+import { ProgressRow } from '../database/models';
 
 const API_URL = "http://192.168.1.3:3000/api";
 
-
-export async function api(path: string, options: RequestInit = {}) {
-    const [token, serverUrl] = await Promise.all([
-        AsyncStorage.getItem('token'),
-        AsyncStorage.getItem('serverUrl'),
-    ]);
-
-    const res = await fetch(`${serverUrl}${path}`, {
-        ...options,
-        headers: {
-            ...(options.headers || {}),
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
+// user login
+export async function login(server: string, username: string, password: string) {
+    const res = await fetch(`${server}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
     });
 
-    if (res.status === 401) {
-        throw new Error('Unauthorized. Token expired?');
-    }
+    if (!res.ok) throw new Error('Login failed');
 
-    return res.json();
+    return await res.json();
 }
 
 export async function logout(navigation: any) {
@@ -36,7 +26,14 @@ export async function logout(navigation: any) {
 }
 
 
+// Books
+export async function scanServerFiles() {
+    await fetch(`${API_URL}/scan_files`)
+}
+
+
 export async function fetchBooks(): Promise<BooksResponse> {
+    await scanServerFiles()
     const res = await fetch(`${API_URL}/list_books`);
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
     return await res.json();
@@ -44,7 +41,8 @@ export async function fetchBooks(): Promise<BooksResponse> {
 
 export async function fetchBookFilesData(id: number) {
     const res = await fetch(`${API_URL}/file_metadata/${id}`);
-    return await res.json();
+    const data = await res.json()
+    return data;
 }
 
 const ROOT = FileSystem.documentDirectory + "audiobooks/";
@@ -64,7 +62,7 @@ export async function downloadAndUnzip(bookId: number) {
     await unzip(zipPath, destPath);
     await FileSystem.deleteAsync(zipPath, { idempotent: false })
     const files = await listFilesRecursively(destPath);
-    // console.log(files)
+    console.log("Downloaded", files?.length ?? 0)
     return { dir: destPath, files };
 }
 
@@ -91,9 +89,12 @@ export async function listFilesRecursively(path: string): Promise<string[]> {
 
 export async function removeLocalBook(bookId: number) {
     const destPath = `${ROOT}${bookId}/`;
-    // await FileSystem.deleteAsync(ROOT, { idempotent: false })
-    await FileSystem.deleteAsync(destPath, { idempotent: false })
-    await deleteBook(bookId)
+    try {
+        // await FileSystem.deleteAsync(ROOT, { idempotent: false })
+        await FileSystem.deleteAsync(destPath, { idempotent: false })
+    } catch (e) {
+        console.error(e)
+    }
 }
 
 export async function saveProgress(userId: number, bookId: number, fileId: number, position: number) {
@@ -104,12 +105,23 @@ export async function saveProgress(userId: number, bookId: number, fileId: numbe
     });
 }
 
-export async function getProgress(userId: number, bookId: number, fileId: number) {
+export async function getFileProgressServer(userId: number, bookId: number, fileId: number) {
     const res = await fetch(
-        `${API_URL}/get_progress/${userId}/${bookId}/${fileId}`
+        `${API_URL}/get_file_progress/${userId}/${bookId}/${fileId}`
     );
     if (!res.ok) return 0;
 
     const data = await res.json();
     return data.progress_time_marker ?? 0;
+}
+
+
+export async function getBookProgressServer(userId: number, bookId: number) {
+    const res = await fetch(
+        `${API_URL}/get_book_progress/${userId}/${bookId}`
+    );
+    if (!res.ok) return 0;
+
+    const data = await res.json() as ProgressRow[];
+    return data
 }

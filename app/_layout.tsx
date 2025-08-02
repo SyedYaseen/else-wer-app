@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/components/hooks/useColorScheme';
-import { initDb } from '@/data/db';
+import { initDb } from '@/data/database/initdb';
+import { resetDb } from '@/data/database/utils';
 export {
   ErrorBoundary,
 } from 'expo-router';
@@ -50,8 +51,8 @@ function RootLayoutNav() {
   useEffect(() => {
     (async () => {
       try {
-        await initDb();
         // await resetDb()
+        await initDb();
         console.log("Database initialized!");
       } catch (err) {
         console.error("DB init error:", err);

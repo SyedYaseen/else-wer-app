@@ -1,6 +1,7 @@
 import { ROOT } from "@/constants/constants";
-import { fetchBooks } from "@/data/api";
-import { Audiobook, FileRow, getFilesForBook, upsertAudiobooks } from "@/data/db";
+import { fetchBooks } from "@/data/api/api";
+import { Audiobook, FileRow } from "@/data/database/models";
+import { getFilesForBook, upsertAudiobooks } from "@/data/database/audiobook-repo";
 import { useAudioPlayer } from '../hooks/useAudioplayer';
 import { Audio } from "expo-av";
 import { useEffect, useState } from "react";

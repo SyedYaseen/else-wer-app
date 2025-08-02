@@ -1,4 +1,4 @@
-import { Audiobook } from "@/data/db";
+import { Audiobook } from "@/data/database/sync-repo";
 import { Link } from "expo-router";
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
