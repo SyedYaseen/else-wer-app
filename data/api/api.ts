@@ -99,7 +99,7 @@ export async function removeLocalBook(bookId: number) {
 
 export async function saveProgressServer(userId: number, bookId: number, fileId: number, position: number, complete: boolean) {
     try {
-        const res = await fetch(`${API_URL}/update_progress`, {
+        await fetch(`${API_URL}/update_progress`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ user_id: userId, book_id: bookId, file_id: fileId, progress_ms: position, complete: complete }),

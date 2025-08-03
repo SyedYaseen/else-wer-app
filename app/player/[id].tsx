@@ -98,45 +98,7 @@ export default function Player() {
             </View>
         );
     }
-    // if (!book) {
-    //     return (
-    //         <View style={styles.container}>
-    //             <Text>Book not found.</Text>
-    //             <TouchableOpacity onPress={async () => {
-    //                 console.log("Running diagnostics...");
 
-    //                 // 1. Check database connection
-    //                 try {
-    //                     const db = await getDb();
-    //                     console.log("Database connection:", db ? "OK" : "FAILED");
-    //                 } catch (e) {
-    //                     console.log("Database connection error:", e);
-    //                 }
-
-    //                 // 2. Check if table exists
-    //                 try {
-    //                     const db = await getDb();
-    //                     const tables = await db.getAllAsync(
-    //                         "SELECT name FROM sqlite_master WHERE type='table'"
-    //                     );
-    //                     console.log("Tables in database:", tables);
-    //                 } catch (e) {
-    //                     console.log("Table check error:", e);
-    //                 }
-
-    //                 // 3. Check if any books exist
-    //                 try {
-    //                     const allBooks = await getAllBooks();
-    //                     console.log("All books in database:", allBooks);
-    //                 } catch (e) {
-    //                     console.log("Get all books error:", e);
-    //                 }
-    //             }}>
-    //                 <Text>Run Diagnostics</Text>
-    //             </TouchableOpacity>
-    //         </View>
-    //     );
-    // }
 
     const handlePlay = async () => {
         try {

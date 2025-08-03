@@ -2,8 +2,8 @@ import { saveProgressServer } from "@/data/api/api";
 import { setFileProgressLcl } from "@/data/database/sync-repo";
 import { Audio, AVPlaybackStatusSuccess } from "expo-av";
 import { useCallback, useEffect, useRef, useState } from "react";
-export function useAudioPlayer() {
 
+export function useAudioPlayer() {
     const soundRef = useRef<Audio.Sound | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [position, setPosition] = useState(0);
@@ -26,14 +26,13 @@ export function useAudioPlayer() {
             intervalRef.current = setInterval(async () => {
                 const pos = Math.floor(positionRef.current);
                 if (currentBookId && absFileId) {
-                    console.log("Saving progress", currentBookId, absFileId, pos);
-                    await setFileProgressLcl(currentBookId, absFileId, pos);
+                    console.log("Saving progress", currentBookId, absFileId, pos)
+                    await setFileProgressLcl(currentBookId, absFileId, pos)
                 }
                 serverRef.current += 1
                 console.log(serverRef.current)
-                if (serverRef.current > 7 && absFileId) {
-                    const res = await saveProgressServer(1, currentBookId as number, absFileId as number, pos, false)
-                    console.log(res)
+                if (serverRef.current > 3 && absFileId) {
+                    await saveProgressServer(1, currentBookId as number, absFileId as number, pos, false)
                     serverRef.current = 0
                 }
             }, 2000);
