@@ -1,14 +1,16 @@
-import { saveProgress } from "@/data/api/api";
-import { setFileProgress } from "@/data/database/sync-repo";
+import { saveProgressServer } from "@/data/api/api";
+import { setFileProgressLcl } from "@/data/database/sync-repo";
 import { Audio, AVPlaybackStatusSuccess } from "expo-av";
 import { useCallback, useEffect, useRef, useState } from "react";
 export function useAudioPlayer() {
+
     const soundRef = useRef<Audio.Sound | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [position, setPosition] = useState(0);
     const [duration, setDuration] = useState(0);
     const [currentUri, setCurrentUri] = useState<string | null>(null);
-    const [currentFileId, setCurrentFileId] = useState<number | null>(null);
+    const [absFileId, setAbsFileId] = useState<number | null>(null);
+    const [relativeFileId, setRelativeFileId] = useState<number | null>(null);
     const [currentBookId, setCurrentBookId] = useState<number | null>(null);
 
     const positionRef = useRef(position);
@@ -23,14 +25,15 @@ export function useAudioPlayer() {
         if (isPlaying) {
             intervalRef.current = setInterval(async () => {
                 const pos = Math.floor(positionRef.current);
-                if (currentBookId && currentFileId) {
-                    console.log("Saving progress", currentBookId, currentFileId, pos);
-                    await setFileProgress(currentBookId, currentFileId, pos);
+                if (currentBookId && absFileId) {
+                    console.log("Saving progress", currentBookId, absFileId, pos);
+                    await setFileProgressLcl(currentBookId, absFileId, pos);
                 }
                 serverRef.current += 1
                 console.log(serverRef.current)
-                if (serverRef.current > 10) {
-                    await saveProgress(1, currentBookId as number, currentFileId as number, pos)
+                if (serverRef.current > 7 && absFileId) {
+                    const res = await saveProgressServer(1, currentBookId as number, absFileId as number, pos, false)
+                    console.log(res)
                     serverRef.current = 0
                 }
             }, 2000);
@@ -45,7 +48,7 @@ export function useAudioPlayer() {
                 intervalRef.current = null;
             }
         };
-    }, [isPlaying, currentBookId, currentFileId]);
+    }, [isPlaying, currentBookId, absFileId, relativeFileId]);
 
     const unload = useCallback(async () => {
         if (soundRef.current) {
@@ -57,26 +60,28 @@ export function useAudioPlayer() {
         setPosition(0);
         setDuration(0);
         setCurrentUri(null);
-        setCurrentFileId(null);
+        setAbsFileId(null);
+        setRelativeFileId(null);
         setCurrentBookId(null);
     }, []);
 
     const playUri = useCallback(
-        async (uri: string, bookId: number, fileId: number, startPosition = 0) => {
+        async (uri: string, bookId: number, absFileId: number, relativeFileId: number, startPosition = 0) => {
             if (uri === currentUri && soundRef.current) {
                 const status = await soundRef.current.getStatusAsync();
                 if (status.isLoaded) {
                     if (status.isPlaying) {
+                        // Save when paused
                         await soundRef.current.pauseAsync();
                         setPosition(status.positionMillis)
-                        await setFileProgress(
+                        await setFileProgressLcl(
                             currentBookId as number,
-                            currentFileId as number,
+                            absFileId as number,
                             Math.floor(status.positionMillis),
                         );
-                        await saveProgress(1, currentBookId as number, currentFileId as number, Math.floor(status.positionMillis))
+                        await saveProgressServer(1, currentBookId as number, absFileId as number, Math.floor(status.positionMillis), false)
 
-                        setIsPlaying(false);
+                        setIsPlaying(false)
                     } else {
                         await soundRef.current.playAsync();
                         await soundRef.current.setPositionAsync(startPosition)
@@ -100,12 +105,13 @@ export function useAudioPlayer() {
                 }
             );
 
-            soundRef.current = sound;
-            setCurrentUri(uri);
-            setCurrentBookId(bookId);
-            setCurrentFileId(fileId);
+            soundRef.current = sound
+            setCurrentUri(uri)
+            setCurrentBookId(bookId)
+            setAbsFileId(absFileId)
+            setRelativeFileId(relativeFileId)
         },
-        [currentUri, unload, currentBookId, currentFileId]
+        [currentUri, unload, currentBookId, absFileId, relativeFileId]
     );
 
     const togglePlayPause = useCallback(async () => {
@@ -116,8 +122,8 @@ export function useAudioPlayer() {
         if (status.isPlaying) {
             await soundRef.current.pauseAsync();
             const currentPos = status.positionMillis
-            await setFileProgress(currentBookId as number, currentFileId as number, currentPos);
-            await saveProgress(1, currentBookId as number, currentFileId as number, currentPos)
+            await setFileProgressLcl(currentBookId as number, absFileId as number, currentPos);
+            await saveProgressServer(1, currentBookId as number, absFileId as number, currentPos, false)
             setIsPlaying(false);
         } else {
             await soundRef.current.playAsync();
@@ -140,6 +146,7 @@ export function useAudioPlayer() {
         duration,
         currentUri,
         currentBookId,
-        currentFileId
+        absFileId,
+        relativeFileId
     };
 }

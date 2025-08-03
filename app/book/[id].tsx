@@ -1,6 +1,6 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
-import { downloadAndUnzip, fetchBookFilesData, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
+import { downloadAndUnzip, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
 import { deleteBookDb, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -33,32 +33,19 @@ export default function BookDetails() {
         };
 
         fetchFiles()
-        // const fetchFilesFromFs = async () => {
-        //     const destPath = `${ROOT}${bookId}/`
-        //     console.log(destPath)
-        //     const files = await listFilesRecursively(destPath)
-        //     if (isMounted && files?.length) {
-        //         setIsDownloaded(true)
-        //     }
-        //     return files
-        // }
 
-        // fetchFilesFromFs().then(f => console.log(f))
         return () => { isMounted = false; }
     }, [bookId]);
 
-    //  LOG  Downloading: http://192.168.1.3:3000/api/download_book/4 -> file:///data/user/0/com.anonymous.elsewerapp/files/audiobooks/4.zip
-    //  LOG  Unzipping: file:///data/user/0/com.anonymous.elsewerapp/files/audiobooks/4.zip -> file:///data/user/0/com.anonymous.elsewerapp/files/audiobooks/4/
-    //  ERROR  Failed to download 4: [Error: Call to function 'NativeStatement.finalizeAsync' has been rejected.
-    // → Caused by: Error code : NOT NULL constraint failed: files.file_id]
     const handleDownload = async () => {
         try {
             await handleDelete()
 
             setIsDownloading(true);
+            const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
 
-            const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchBookFilesData(bookId)
             const { files } = await downloadAndUnzip(bookId);
+
             fileRows?.forEach(fr => {
                 fr.local_path = files.find(f => fr.file_path && f.endsWith(fr.file_path))
                 const fpath = fr.local_path?.split("/")

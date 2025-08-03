@@ -1,7 +1,7 @@
 
 import Library from '@/components/library';
 import { AUDIO_EXTS, ROOT } from '@/constants/constants';
-import { downloadAndUnzip, fetchBookFilesData, fetchBooks, getFileProgressServer as getFileServerProgress, removeLocalBook } from '@/data/api/api';
+import { downloadAndUnzip, fetchFileMetaFromServer, fetchBooks, getFileProgressServer as getFileServerProgress, removeLocalBook } from '@/data/api/api';
 import { getFilesForBook, markBookDownloaded, upsertAudiobooks, upsertFiles } from '@/data/database/audiobook-repo';
 import { getFileProgress as getFileLocalProgress } from '@/data/database/sync-repo';
 import { Audiobook, FileRow } from '@/data/database/models';
@@ -105,7 +105,7 @@ export default function Home() {
   const handleDownload = async (bookId: number) => {
     try {
       setDownloadingBookId(bookId);
-      const { data } = await fetchBookFilesData(bookId)
+      const { data } = await fetchFileMetaFromServer(bookId)
       const fileRows: FileRow[] = data
       const { files } = await downloadAndUnzip(bookId);
       fileRows?.map(fr => {

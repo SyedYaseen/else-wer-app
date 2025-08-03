@@ -53,7 +53,7 @@ function RootLayoutNav() {
       try {
         // await resetDb()
         await initDb();
-        console.log("Database initialized!");
+        // console.log("Database initialized!");
       } catch (err) {
         console.error("DB init error:", err);
       }

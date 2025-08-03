@@ -39,7 +39,7 @@ export async function fetchBooks(): Promise<BooksResponse> {
     return await res.json();
 }
 
-export async function fetchBookFilesData(id: number) {
+export async function fetchFileMetaFromServer(id: number) {
     const res = await fetch(`${API_URL}/file_metadata/${id}`);
     const data = await res.json()
     return data;
@@ -97,12 +97,17 @@ export async function removeLocalBook(bookId: number) {
     }
 }
 
-export async function saveProgress(userId: number, bookId: number, fileId: number, position: number) {
-    await fetch(`${API_URL}/update_progress`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, book_id: bookId, file_id: fileId, progress_time_marker: position }),
-    });
+export async function saveProgressServer(userId: number, bookId: number, fileId: number, position: number, complete: boolean) {
+    try {
+        const res = await fetch(`${API_URL}/update_progress`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, book_id: bookId, file_id: fileId, progress_ms: position, complete: complete }),
+        });
+    }
+    catch (e) {
+        console.error("Err updaing progressToServer", e)
+    }
 }
 
 export async function getFileProgressServer(userId: number, bookId: number, fileId: number) {
@@ -120,8 +125,7 @@ export async function getBookProgressServer(userId: number, bookId: number) {
     const res = await fetch(
         `${API_URL}/get_book_progress/${userId}/${bookId}`
     );
-    if (!res.ok) return 0;
+    if (!res.ok) return [] as ProgressRow[]; // TODO
 
-    const data = await res.json() as ProgressRow[];
-    return data
+    return await res.json() as ProgressRow[];
 }

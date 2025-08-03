@@ -81,7 +81,12 @@ export async function markBookDownloaded(bookId: number, localPath: string) {
 
 export async function getAllBooks(): Promise<Audiobook[]> {
     const db = await getDb();
-    return db.getAllAsync<Audiobook>(`SELECT * FROM audiobooks ORDER BY title ASC`);
+    try {
+        return db.getAllAsync<Audiobook>(`SELECT * FROM audiobooks ORDER BY id ASC`);
+    } catch (e) {
+        console.log(e)
+        return [] as Audiobook[]
+    }
 }
 
 export async function getBook(bookId: number): Promise<Audiobook | null> {
@@ -90,7 +95,7 @@ export async function getBook(bookId: number): Promise<Audiobook | null> {
         `SELECT * FROM audiobooks WHERE id = ? LIMIT 1`,
         [bookId]
     );
-    return row ?? null;
+    return row;
 }
 
 export async function getFilesForBook(bookId: number): Promise<FileRow[]> {
@@ -114,7 +119,7 @@ export async function deleteBookDb(bookId: number) {
     try {
         const db = await getDb();
         await db.runAsync(`DELETE FROM files where book_id = ?`, [bookId])
-        await db.runAsync(`DELETE FROM audiobooks WHERE id = ?`, [bookId]);
+        // await db.runAsync(`DELETE FROM audiobooks WHERE id = ?`, [bookId]);
         // files + progress are deleted via FK cascade
     } catch (e) {
         console.error(e)
