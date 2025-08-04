@@ -2,7 +2,6 @@ import { ROOT } from "@/constants/constants";
 import { fetchBooks } from "@/data/api/api";
 import { Audiobook, FileRow } from "@/data/database/models";
 import { getFilesForBook, upsertAudiobooks } from "@/data/database/audiobook-repo";
-import { useAudioPlayer } from '../hooks/useAudioplayer';
 import { Audio } from "expo-av";
 import { useEffect, useState } from "react";
 import { FlatList, View } from "react-native";
@@ -13,7 +12,6 @@ function Library() {
     const [books, setBooks] = useState<Audiobook[]>([]);
     const [downloadingBookId, setDownloadingBookId] = useState<number | null>(null);
     const [downloadedFiles, setDownloadedFiles] = useState<Record<number, FileRow[]>>({});
-    const player = useAudioPlayer();
 
     const downloadBook: (bookId: number) => void = (bookId: number) => {
         console.log("Downloading", bookId)

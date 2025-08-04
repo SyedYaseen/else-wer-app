@@ -8,7 +8,7 @@ export type Audiobook = {
     metadata?: string | null;
     downloaded: number;
     created_at?: string | null;
-};
+}
 
 export type FileRow = {
     id: number;
@@ -21,12 +21,12 @@ export type FileRow = {
     channels?: number | null;
     sample_rate?: number | null;
     bitrate?: number | null;
-};
+}
 
 export type ProgressRow = {
     book_id: number;
     file_id: number;
     progress_ms: number;
-    complete: boolean
-    updated_at?: string | null;
-};
+    complete: boolean;
+    updated_at: string;
+}

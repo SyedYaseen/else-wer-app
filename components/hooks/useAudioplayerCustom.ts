@@ -3,7 +3,7 @@ import { setFileProgressLcl } from "@/data/database/sync-repo";
 import { Audio, AVPlaybackStatusSuccess } from "expo-av";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function useAudioPlayer() {
+export function useAudioPlayerCustomHook() {
     const soundRef = useRef<Audio.Sound | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [position, setPosition] = useState(0);

@@ -5,7 +5,7 @@ import { downloadAndUnzip, fetchFileMetaFromServer, fetchBooks, getFileProgressS
 import { getFilesForBook, markBookDownloaded, upsertAudiobooks, upsertFiles } from '@/data/database/audiobook-repo';
 import { getFileProgress as getFileLocalProgress } from '@/data/database/sync-repo';
 import { Audiobook, FileRow } from '@/data/database/models';
-import { useAudioPlayer } from '@/components/hooks/useAudioplayer';
+import { useAudioPlayerCustomHook } from '@/components/hooks/useAudioplayerCustom';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
@@ -79,7 +79,7 @@ export default function Home() {
   const [books, setBooks] = useState<Audiobook[]>([]);
   const [downloadingBookId, setDownloadingBookId] = useState<number | null>(null);
   const [downloadedFiles, setDownloadedFiles] = useState<Record<number, FileRow[]>>({});
-  const player = useAudioPlayer();
+  const player = useAudioPlayerCustomHook();
 
   useEffect(() => {
     fetchBooks().then(async (data) => {

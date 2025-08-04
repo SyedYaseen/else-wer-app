@@ -2,26 +2,27 @@ import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { useLocalSearchParams } from 'expo-router';
 import { getAllBooks, getBook, getFilesForBook } from '@/data/database/audiobook-repo';
-import { Audiobook, FileRow, } from '@/data/database/models';
+import { Audiobook, FileRow, ProgressRow, } from '@/data/database/models';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAudioPlayer } from '@/components/hooks/useAudioplayer';
+import { useAudioPlayerCustomHook } from '@/components/hooks/useAudioplayerCustom';
 import { Audio } from "expo-av";
 import { getProgressForBookLcl } from '@/data/database/sync-repo';
 import { getBookProgressServer } from '@/data/api/api';
-import { getDb } from '@/data/database/initdb';
 
 export default function Player() {
     const { id } = useLocalSearchParams<{ id: string }>();
-
     const [book, setBook] = useState<Audiobook | null>(null)
     const [files, setFiles] = useState<FileRow[]>([])
+    const [queue, setQueue] = useState<FileRow[]>([])
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const player = useAudioPlayer()
+    const player = useAudioPlayerCustomHook()
+
 
     useEffect(() => {
         let isMounted = true;
+
         const loadData = async () => {
             if (!id) return;
 
@@ -44,6 +45,7 @@ export default function Player() {
                 setBook(bookData);
                 setFiles(bookFiles);
 
+
                 await Audio.setAudioModeAsync({
                     playsInSilentModeIOS: true,
                     staysActiveInBackground: false,
@@ -56,11 +58,99 @@ export default function Player() {
             }
         };
 
-        if (isMounted)
-            loadData();
+        if (isMounted) {
+            loadData()
+        }
 
         return () => { isMounted = false }
     }, [id]);
+
+
+    useEffect(() => {
+        const handleQueue = async () => {
+
+            if (files.length === 0) {
+                console.error("Files not in localdb or files not downloaded")
+                return
+            }
+            if (!book) {
+                console.error("Trouble loading selected book")
+                return;
+            }
+            const [progressLcl, progressServer] = await Promise.all([
+                getProgressForBookLcl(book.id),
+                getBookProgressServer(1, book.id)
+            ])
+
+            if (progressLcl.length === 0 && progressServer.length === 0) { // Book start
+                setQueue(files)
+                player.position = 0
+                return
+            }
+
+            // let progLclIncomplete: ProgressRow[] = []
+            // let progLclComplete: ProgressRow[] = []
+
+            // let progSrvrIncomplete: ProgressRow[] = []
+            // let progSrvrComplete: ProgressRow[] = []
+
+            // progressLcl.forEach(p => p.complete ? progLclComplete.push(p) : progLclIncomplete.push(p))
+            // progressServer.forEach(p => p.complete ? progSrvrComplete.push(p) : progSrvrIncomplete.push(p))
+
+            const lclCompleteCount = progressLcl.reduce((prev, curr) =>
+                curr.complete ? prev + 1 : prev
+                , 0)
+
+            const srvrCompleteCount = progressServer.reduce((prev, curr) =>
+                curr.complete ? prev + 1 : prev
+                , 0)
+
+
+            // If book was marked complete - Ideally this shouldnt happen here, but you never know
+            if (lclCompleteCount === files.length || srvrCompleteCount === files.length) {
+                console.log("Book was marked complete. Starting from beginnig")
+                setQueue(files)
+                return
+            }
+
+            // If only one of the sources have progress for file
+            if ((progressLcl.length === 0 && progressServer.length !== 0) || (progressLcl.length !== 0 && progressServer.length === 0)) {
+                const validPos = progressLcl.length === 0 ? progressServer : progressLcl
+
+                // get recent update
+                const pos = validPos.reduce((prev, curr) =>
+                    new Date(prev?.updated_at) < new Date(curr?.updated_at) ? prev : curr
+                )
+
+
+                const q = pos.complete ? files.filter(f => f.id > pos.file_id) : files.filter(f => f.id >= pos.file_id)
+                player.position = pos.complete ? 0 : pos.progress_ms
+                setQueue(q)
+                return
+            }
+
+            // Find most recent updateon - from all files
+            // Handle conflict by comparing both server and lcl updateon
+
+            const lclpos = progressLcl.reduce((prev, curr) =>
+                new Date(prev?.updated_at) < new Date(curr?.updated_at) ? prev : curr
+            )
+
+            const srvrPos = progressServer.reduce((prev, curr) =>
+                new Date(prev?.updated_at) < new Date(curr?.updated_at) ? prev : curr
+            )
+
+            const recentPos = new Date(lclpos.updated_at) > new Date(srvrPos.updated_at) ? lclpos : srvrPos
+            const q = recentPos.complete ? files.filter(f => f.id > recentPos.file_id) : files.filter(f => f.id >= recentPos.file_id)
+            player.position = recentPos.complete ? 0 : recentPos.progress_ms
+            setQueue(q)
+
+        }
+
+        if (files.length > 0) {
+            handleQueue();
+        }
+    }, [files])
 
 
     if (loading) {
@@ -101,18 +191,12 @@ export default function Player() {
 
 
     const handlePlay = async () => {
+        console.log(queue[0], player.position)
+
         try {
-            if (files.length === 0) {
-                console.error("Files not in localdb or files not downloaded")
+            if (queue.length > 0) {
+                await player.playUri(queue[0].local_path as string, queue[0].book_id, queue[0].id, queue[0].file_id, player.position)
             }
-
-            const lastPosLcl = await getProgressForBookLcl(book.id)
-            const lastPosServer = await getBookProgressServer(1, book.id)
-
-            // if (lastPosLcl.length === 0 && lastPosServer.length === 0) { // Book start
-            const firstFile = files[0]
-            await player.playUri(firstFile.local_path as string, firstFile.book_id, firstFile.id, firstFile.file_id, 0);
-            // } 
         } catch (e) {
             console.log(e)
         }
