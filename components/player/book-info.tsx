@@ -1,5 +1,4 @@
 import { StyleSheet, Text, View, Image } from 'react-native'
-import React from 'react'
 import { useAudioPlayerStore } from '../store/audio-player-store'
 
 export default function BookInfo() {

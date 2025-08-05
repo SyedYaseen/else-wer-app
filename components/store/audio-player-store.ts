@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { Audiobook, FileRow } from '@/data/database/models';
+import { AudioPlayer } from 'expo-audio';
 
 interface AudioPlayerState {
-    initPos: number | null;
-    setInitpos: (initPos: number) => void;
+    player: AudioPlayer | null;
+    setPlayer: (player: AudioPlayer) => void;
 
     showMiniPlayer: boolean;
     setShowMiniPlayer: (visible: boolean) => void;
@@ -19,15 +20,17 @@ interface AudioPlayerState {
     popQueue: () => void;
     clearQueue: () => void;
 
+    initPos: number | null;
+    setInitpos: (initPos: number) => void;
+
     files: FileRow[] | null;
     setFiles: (f: FileRow[]) => void;
     clearFiles: () => void;
 }
 
 export const useAudioPlayerStore = create<AudioPlayerState>((set) => ({
-
-    initPos: 0,
-    setInitpos: (initPos) => set({ initPos }),
+    player: null,
+    setPlayer: (player: AudioPlayer) => set({ player }),
 
     showMiniPlayer: false,
     setShowMiniPlayer: (visible) => set({ showMiniPlayer: visible }),
@@ -45,6 +48,9 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set) => ({
         return { queue: queue.slice(1) }
     }),
     clearQueue: () => set({ queue: [] }),
+
+    initPos: 0,
+    setInitpos: (initPos) => set({ initPos }),
 
     files: null,
     setFiles: (files: FileRow[]) => set({ files }),

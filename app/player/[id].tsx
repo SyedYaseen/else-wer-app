@@ -3,12 +3,10 @@ import React, { useEffect, useState } from 'react'
 import { useLocalSearchParams } from 'expo-router';
 import { getAllBooks, getBook, getFilesForBook } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAudioController } from '@/components/hooks/useSharedAudioPlayer';
+import { useAudioController } from '@/components/hooks/useAudioController';
 import Controls from '@/components/player/controls';
 import BookInfo from '@/components/player/book-info';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
-import { getBookProgressServer } from '@/data/api/api';
-import { getProgressForBookLcl } from '@/data/database/sync-repo';
 import useInitQueue from '@/components/hooks/useInitQueue';
 
 export default function Player() {

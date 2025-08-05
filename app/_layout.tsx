@@ -9,7 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/components/hooks/useColorScheme';
 import { initDb } from '@/data/database/initdb';
 import { resetDb } from '@/data/database/utils';
-import { useAudioController } from '@/components/hooks/useSharedAudioPlayer';
+import { useAudioController } from '@/components/hooks/useAudioController';
+import useInitPlayer from '@/components/hooks/useInitPlayer';
 export {
   ErrorBoundary,
 } from 'expo-router';
@@ -48,7 +49,8 @@ function RootLayoutNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
-  useAudioController()
+  // useAudioController()
+  useInitPlayer()
 
   useEffect(() => {
     (async () => {

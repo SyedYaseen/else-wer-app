@@ -1,10 +1,13 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useEffect } from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
-import { useAudioController } from '../hooks/useSharedAudioPlayer'
+import { useAudioController } from '../hooks/useAudioController'
+import { useAudioPlayerStore } from '../store/audio-player-store'
+import { AudioPlayer } from 'expo-audio'
 
-export default function PlayButton() {
-    const { player, onPlay } = useAudioController()
+export default function PlayButton({ player }: { player: AudioPlayer }) {
+    const { onPlay } = useAudioController()
+
 
     // useEffect(() => {
     //     // const interval = setInterval(() => {

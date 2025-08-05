@@ -1,19 +1,25 @@
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useAudioPlayerStatus } from 'expo-audio';
 import { useEffect, useState } from 'react';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import { saveProgressServer } from '@/data/api/api';
 import { setFileProgressLcl } from '@/data/database/sync-repo';
 
 export function useAudioController() {
-    const player = useAudioPlayer();
-    const playerStatus = useAudioPlayerStatus(player);
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<null | string>(null)
+
+    const player = useAudioPlayerStore(s => s.player)
+    if (!player) {
+        setError("No player exists")
+        console.error("No player exists")
+        throw new Error("Player not initialized")
+    }
+
+    const playerStatus = useAudioPlayerStatus(player)
 
     const currentBook = useAudioPlayerStore(s => s.currentBook)
     const queue = useAudioPlayerStore(s => s.queue)
     const popQueue = useAudioPlayerStore(s => s.popQueue)
-
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<null | string>(null);
 
     // Load next on file complete - untested
     useEffect(() => {
@@ -34,11 +40,23 @@ export function useAudioController() {
     }, [playerStatus?.didJustFinish])
 
     const rewind = () => {
-        console.log("Rewind 10s")
+        if (player.currentTime - 30 > 0) {
+            player.seekTo(player.currentTime - 30)
+            player.play()
+        } else {
+            player.seekTo(0)
+            player.play()
+        }
     }
 
     const fastForward = () => {
-        console.log("Forward 10s")
+        if (player.currentTime + 30 < player.duration) {
+            player.seekTo(player.currentTime + 30)
+            player.play()
+        } else {
+            player.seekTo(player.duration)
+            player.play()
+        }
     }
 
     const onPlay = async () => {
@@ -70,7 +88,5 @@ export function useAudioController() {
         }
     }
 
-
-
-    return { player, playerStatus, onPlay, loading, error, fastForward, rewind }
+    return { player, onPlay, loading, error, fastForward, rewind }
 }
