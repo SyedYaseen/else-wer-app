@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 
-const Player = () => {
+const FullPlayer = () => {
     return (
         <View>
             <Text>Player</Text>
@@ -9,6 +9,6 @@ const Player = () => {
     )
 }
 
-export default Player
+export default FullPlayer
 
 const styles = StyleSheet.create({})

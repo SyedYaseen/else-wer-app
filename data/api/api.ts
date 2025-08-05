@@ -103,7 +103,7 @@ export async function saveProgressServer(userId: number, bookId: number, fileId:
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ user_id: userId, book_id: bookId, file_id: fileId, progress_ms: position, complete: complete }),
-        });
+        })
     }
     catch (e) {
         console.error("Err updaing progressToServer", e)
