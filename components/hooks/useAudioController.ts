@@ -1,5 +1,5 @@
 import { useAudioPlayerStatus } from 'expo-audio';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import { saveProgressServer } from '@/data/api/api';
 import { setFileProgressLcl } from '@/data/database/sync-repo';
@@ -21,23 +21,7 @@ export function useAudioController() {
     const queue = useAudioPlayerStore(s => s.queue)
     const popQueue = useAudioPlayerStore(s => s.popQueue)
 
-    // Load next on file complete - untested
-    useEffect(() => {
-        if (!player) return
-        if (!playerStatus?.didJustFinish) return
 
-        console.log("jere", playerStatus)
-
-        popQueue()
-        if (queue && queue.length > 0) {
-            const next = queue[0];
-            if (next?.local_path) {
-                player.replace(next.local_path);
-                player.play();
-            }
-            console.log("Save after file complete")
-        }
-    }, [playerStatus?.didJustFinish])
 
     const rewind = () => {
         if (player.currentTime - 30 > 0) {
@@ -69,14 +53,14 @@ export function useAudioController() {
                     await setFileProgressLcl(
                         currentBook?.id as number,
                         queue[0].id as number,
-                        playerStatus.currentTime * 1000,
+                        player.currentTime * 1000,
                     );
-                    await saveProgressServer(1, currentBook?.id as number, queue[0].id as number, Math.floor(playerStatus.currentTime * 1000), false)
+                    await saveProgressServer(1, currentBook?.id as number, queue[0].id as number, Math.floor(player.currentTime * 1000), false)
 
                     console.log("save compelte")
                 } else {
-                    console.log(playerStatus)
-                    if (!playerStatus.isLoaded) { // Book already exists so just resume
+                    console.log(player)
+                    if (!player.isLoaded) { // Book already exists so just resume
                         player.replace(queue[0].local_path as string)
                         console.log("time at resume", playerStatus.currentTime)
                     }
