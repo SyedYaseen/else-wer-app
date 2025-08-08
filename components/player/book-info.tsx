@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, Image } from 'react-native'
 import { useAudioPlayerStore } from '../store/audio-player-store'
+import { API_URL } from '@/data/api/api'
 
 export default function BookInfo() {
     const currentBook = useAudioPlayerStore(s => s.currentBook)
@@ -14,7 +15,7 @@ export default function BookInfo() {
             <View style={styles.coverContainer}>
                 <Image
                     source={{
-                        uri: 'https://www.thebookdesigner.com/wp-content/uploads/2023/12/The-Hobbit-Book-Cover-Minimalistic-Mountains.png?channel=Organic&medium=Google%20-%20Search'
+                        uri: `${API_URL}${currentBook?.cover_art}`
                     }}
                     style={styles.coverImage}
                 />

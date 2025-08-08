@@ -6,9 +6,6 @@ interface AudioPlayerState {
     player: AudioPlayer | null;
     setPlayer: (player: AudioPlayer) => void;
 
-    showMiniPlayer: boolean;
-    setShowMiniPlayer: (visible: boolean) => void;
-
     currentBookId: number | null;
     setCurrentBookId: (id: number) => void;
 
@@ -31,9 +28,6 @@ interface AudioPlayerState {
 export const useAudioPlayerStore = create<AudioPlayerState>((set) => ({
     player: null,
     setPlayer: (player: AudioPlayer) => set({ player }),
-
-    showMiniPlayer: false,
-    setShowMiniPlayer: (visible) => set({ showMiniPlayer: visible }),
 
     currentBookId: null,
     setCurrentBookId: (id: number) => set({ currentBookId: id }),

@@ -18,6 +18,15 @@ export default function Controls() {
         return
     }
 
+
+    // const handleFilePlay = async (uri: string, file_id: number) => {
+    //     const lastPosServer = await getFileServerProgress(1, item.id, file_id); // get saved progress
+    //     const lastPosLcl = await getFileLocalProgress(item.id, file_id)
+    //     const lastPos = Math.max(lastPosServer, lastPosLcl)
+    //     console.log("Last posiion", lastPosServer, lastPosLcl, lastPos)
+    //     await player.playUri(uri, item.id, file_id, lastPos);
+    // };
+
     return (
         <View style={{ flex: 1 }}>
             {queue && queue.length > 0 && <Text>In queue: {queue.length} Current: {queue[0].file_name}</Text>}

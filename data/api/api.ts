@@ -4,7 +4,7 @@ import * as FileSystem from "expo-file-system";
 import { unzip } from "react-native-zip-archive";
 import { ProgressRow } from '../database/models';
 
-const API_URL = "http://192.168.1.3:3000/api";
+export const API_URL = "http://192.168.1.3:3000/api";
 
 // user login
 export async function login(server: string, username: string, password: string) {
@@ -60,10 +60,11 @@ export async function downloadAndUnzip(bookId: number) {
 
     console.log("Unzipping:", zipPath, "->", destPath);
     await unzip(zipPath, destPath);
+
     await FileSystem.deleteAsync(zipPath, { idempotent: false })
-    const files = await listFilesRecursively(destPath);
-    console.log("Downloaded", files?.length ?? 0)
-    return { dir: destPath, files };
+    const filePaths = await listFilesRecursively(destPath);
+    console.log("Downloaded", filePaths?.length ?? 0)
+    return { dir: destPath, localFilePaths: filePaths };
 }
 
 export async function listFilesRecursively(path: string): Promise<string[]> {

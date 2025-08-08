@@ -1,40 +1,23 @@
-import { ROOT } from "@/constants/constants";
 import { fetchBooks } from "@/data/api/api";
 import { Audiobook, FileRow } from "@/data/database/models";
-import { getFilesForBook, upsertAudiobooks } from "@/data/database/audiobook-repo";
-import { Audio } from "expo-av";
+import { upsertAudiobooks } from "@/data/database/audiobook-repo";
 import { useEffect, useState } from "react";
 import { FlatList, View } from "react-native";
 import BookCard from './book-card';
 
-
 function Library() {
     const [books, setBooks] = useState<Audiobook[]>([]);
-    const [downloadingBookId, setDownloadingBookId] = useState<number | null>(null);
-    const [downloadedFiles, setDownloadedFiles] = useState<Record<number, FileRow[]>>({});
-
-    const downloadBook: (bookId: number) => void = (bookId: number) => {
-        console.log("Downloading", bookId)
-    }
 
     useEffect(() => {
         fetchBooks().then(async (data) => {
             setBooks(data.books);
             await upsertAudiobooks(data.books)
-
-            data?.books.forEach(async b => {
-                const destPath = `${ROOT}${b.id}/`;
-                const files = await getFilesForBook(b.id)
-                if (files && files.length) {
-                    setDownloadedFiles((prev) => ({ ...prev, [b.id]: files }));
-                }
-            })
         });
 
-        Audio.setAudioModeAsync({
-            playsInSilentModeIOS: true,
-            staysActiveInBackground: false,
-        });
+        // Audio.setAudioModeAsync({
+        //     playsInSilentModeIOS: true,
+        //     staysActiveInBackground: false,
+        // });
     }, []);
 
 

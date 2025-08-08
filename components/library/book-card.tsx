@@ -1,10 +1,11 @@
-import { Audiobook } from "@/data/database/sync-repo";
+import { API_URL } from "@/data/api/api";
+import { Audiobook } from "@/data/database/models";
 import { Link } from "expo-router";
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-
 function BookCard({ book }: { book: Audiobook }) {
+    console.log(book)
     return (
         <Link
             href={{
@@ -18,10 +19,9 @@ function BookCard({ book }: { book: Audiobook }) {
             asChild
         >
             <TouchableOpacity style={styles.card}>
-
                 <Image
                     source={{
-                        uri: 'https://www.thebookdesigner.com/wp-content/uploads/2023/12/The-Hobbit-Book-Cover-Minimalistic-Mountains.png?channel=Organic&medium=Google%20-%20Search'
+                        uri: `${API_URL}${book.cover_art}`
                     }}
                     style={styles.cover}
                 />

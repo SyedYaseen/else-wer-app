@@ -1,13 +1,15 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
-import { downloadAndUnzip, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
-import { deleteBookDb, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
+import { API_URL, downloadAndUnzip, fetchFileMetaFromServer, getBookProgressServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
+import { deleteBookDb, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, Button, Image, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router'
 import { FileRow } from '@/data/database/models';
+import { useAudioPlayerStore } from '@/components/store/audio-player-store';
+import { getProgressForBookLcl } from '@/data/database/sync-repo';
 type BookParams = {
     id: string;
     title: string;
@@ -17,25 +19,159 @@ type BookParams = {
 export default function BookDetails() {
     const { id, title, author } = useLocalSearchParams<BookParams>();
     const bookId = parseInt(id);
+    const { player, currentBookId, setCurrentBookId, currentBook, setCurrentBook, queue, setQueue, files, setFiles, setInitpos } = useAudioPlayerStore()
+
     const [isDownloading, setIsDownloading] = useState(false)
     const [isDownloaded, setIsDownloaded] = useState(false)
-    const [files, setFiles] = useState<FileRow[]>()
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<null | string>(null);
     const router = useRouter()
 
+    // const setCurrentBookId = useAudioPlayerStore(s => s.setCurrentBookId)
+    // const setFiles = useAudioPlayerStore(s => s.setFiles)
+    // const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
+    // const currentBook = useAudioPlayerStore(s => s.currentBook)
+
+    // Check for files in fs and check in db
+
+    // useEffect(() => {
+    //     let isMounted = true;
+
+    //     const fetchFiles = async () => {
+    //         const files = await getFilesForBook(bookId);
+    //         if (isMounted && files?.length) {
+    //             setIsDownloaded(true)
+    //         }
+    //     };
+
+    //     fetchFiles()
+
+    //     return () => { isMounted = false; }
+    // }, [bookId]);
+
+    // Load book
     useEffect(() => {
-        let isMounted = true;
+        const loadBook = async () => {
+            console.log("loading book")
+            const bookId = parseInt(id);
+            setCurrentBookId(bookId)
 
-        const fetchFiles = async () => {
-            const files = await getFilesForBook(bookId);
-            if (isMounted && files?.length) {
-                setIsDownloaded(true)
+            if (!bookId) {
+                setError("Invalid book ID");
+                setLoading(false);
+                return;
             }
-        };
 
-        fetchFiles()
 
-        return () => { isMounted = false; }
-    }, [bookId]);
+
+            try {
+                setLoading(true);
+                setError(null);
+
+                const [bookData, files] = await Promise.all([
+                    getBook(bookId),
+                    getFilesForBook(bookId),
+                ])
+
+                setCurrentBook(bookData);
+
+                if (files && files.length) {
+                    setFiles(files)
+                    setIsDownloaded(true)
+
+                    console.log("loading queue and fetching progress")
+                    let pos = 0
+
+                    if (!files || files.length === 0) {
+                        setError("Missing files")
+                        console.error("Files not in localdb or files not downloaded")
+                        return
+                    }
+
+                    if (!currentBook) {
+                        console.error("Trouble loading selected book")
+                        return;
+                    }
+
+                    const [progressLcl, progressServer] = await Promise.all([
+                        getProgressForBookLcl(bookId),
+                        getBookProgressServer(1, bookId)
+                    ])
+
+                    if (progressLcl.length === 0 && progressServer.length === 0) { // Book start
+                        setQueue(files)
+                        return
+                    }
+
+                    const lclCompleteCount = progressLcl.reduce((prev, curr) =>
+                        curr.complete ? prev + 1 : prev
+                        , 0)
+
+                    const srvrCompleteCount = progressServer.reduce((prev, curr) =>
+                        curr.complete ? prev + 1 : prev
+                        , 0)
+
+
+                    // If book was marked complete - Ideally this shouldnt happen here, but you never know
+                    if (lclCompleteCount === files.length || srvrCompleteCount === files.length) {
+                        console.log("Book was marked complete. Starting from beginnig")
+                        setQueue(files)
+                        return
+                    }
+
+                    // If only one of the sources have progress for file
+                    if ((progressLcl.length === 0 && progressServer.length !== 0) || (progressLcl.length !== 0 && progressServer.length === 0)) {
+                        const validPos = progressLcl.length === 0 ? progressServer : progressLcl
+
+                        // get recent update
+                        const position = validPos.reduce((prev, curr) =>
+                            new Date(prev?.updated_at) < new Date(curr?.updated_at) ? prev : curr
+                        )
+
+
+                        const q = position.complete ? files.filter(f => f.id > position.file_id) : files.filter(f => f.id >= position.file_id)
+                        // customPlayer.position = pos.complete ? 0 : pos.progress_ms
+                        pos = position.complete ? 0 : position.progress_ms
+                        setQueue(q)
+                        return
+                    }
+
+                    // Find most recent updateon - from all files
+                    // Handle conflict by comparing both server and lcl updateon
+
+                    const lclpos = progressLcl.reduce((prev, curr) =>
+                        new Date(prev?.updated_at) < new Date(curr?.updated_at) ? prev : curr
+                    )
+
+                    const srvrPos = progressServer.reduce((prev, curr) =>
+                        new Date(prev?.updated_at) < new Date(curr?.updated_at) ? prev : curr
+                    )
+
+                    const recentPos = new Date(lclpos.updated_at) > new Date(srvrPos.updated_at) ? lclpos : srvrPos
+                    const q = recentPos.complete ? files.filter(f => f.id > recentPos.file_id) : files.filter(f => f.id >= recentPos.file_id)
+
+                    pos = recentPos.complete ? 0 : recentPos.progress_ms
+                    setQueue(q)
+
+                    if (queue && queue.length > 0 && pos !== 0) {
+                        // player.replace(queue[0].local_path as string)
+                        setInitpos(pos / 1000)
+                    }
+                }
+
+            } catch (err) {
+                console.error("Error loading book:", err)
+                setError("Failed to load book data.")
+            } finally {
+                setLoading(false)
+            }
+        }
+        if (id && !player?.playing && !player?.paused)
+            loadBook()
+    }, [id])
+
+
+
 
     const handleDownload = async () => {
         try {
@@ -44,14 +180,14 @@ export default function BookDetails() {
             setIsDownloading(true);
             const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
 
-            const { files } = await downloadAndUnzip(bookId);
+            const { localFilePaths } = await downloadAndUnzip(bookId);
 
             fileRows?.forEach(fr => {
-                fr.local_path = files.find(f => fr.file_path && f.endsWith(fr.file_path))
-                const fpath = fr.local_path?.split("/")
-                fr.file_name = fpath?.at(fpath.length - 1) ?? `book_${fr.book_id}-file_${fr.file_id}`
+                fr.local_path = localFilePaths.find(f => fr.file_name && f.endsWith(fr.file_name))
             })
 
+            currentBook!.downloaded = 1
+            setCurrentBook(currentBook)
             await upsertFiles(fileRows)
             markBookDownloaded(bookId, `${ROOT}${bookId}/`)
             setIsDownloaded(true)
@@ -82,7 +218,7 @@ export default function BookDetails() {
             <View style={styles.coverContainer}>
                 <Image
                     source={{
-                        uri: 'https://www.thebookdesigner.com/wp-content/uploads/2023/12/The-Hobbit-Book-Cover-Minimalistic-Mountains.png?channel=Organic&medium=Google%20-%20Search'
+                        uri: `${API_URL}${currentBook?.cover_art}`
                     }}
                     style={styles.coverImage}
                 />
@@ -103,7 +239,6 @@ export default function BookDetails() {
                         <TouchableOpacity onPress={handlePlay}>
                             <MaterialIcons name='play-circle' size={40} color="#555555" />
                         </TouchableOpacity>
-
                     }
                     {/* <TouchableOpacity onPress={() => console.log("Completed...")}>
                         <MaterialIcons name='check-circle' size={40} color="#555555" />
