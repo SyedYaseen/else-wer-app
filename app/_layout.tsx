@@ -68,6 +68,9 @@ function RootLayoutNav() {
       }
     })();
 
+  }, [])
+
+  useEffect(() => {
     const checkToken = async () => {
       const token = await AsyncStorage.getItem('token');
       if (!token && pathname !== '/login') {

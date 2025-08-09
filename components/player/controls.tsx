@@ -1,31 +1,20 @@
 import { StyleSheet, TouchableOpacity, View, Text } from 'react-native'
-import React, { useEffect } from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useAudioController } from '../hooks/useAudioController'
-import PlayButton from './play-button'
 import Seeker from './seeker'
 import { useAudioPlayerStore } from '../store/audio-player-store'
-import { useUpdateQueue } from '../hooks/useInitQueue'
 
 export default function Controls() {
     const { rewind, fastForward } = useAudioController()
-    useUpdateQueue()
+
     const player = useAudioPlayerStore(s => s.player)
     const queue = useAudioPlayerStore(s => s.queue)
+    const { onPlay } = useAudioController()
 
     if (!player) {
         console.error("Player object not initialized")
         return
     }
-
-
-    // const handleFilePlay = async (uri: string, file_id: number) => {
-    //     const lastPosServer = await getFileServerProgress(1, item.id, file_id); // get saved progress
-    //     const lastPosLcl = await getFileLocalProgress(item.id, file_id)
-    //     const lastPos = Math.max(lastPosServer, lastPosLcl)
-    //     console.log("Last posiion", lastPosServer, lastPosLcl, lastPos)
-    //     await player.playUri(uri, item.id, file_id, lastPos);
-    // };
 
     return (
         <View style={{ flex: 1 }}>
@@ -35,7 +24,14 @@ export default function Controls() {
                 <TouchableOpacity onPress={rewind}>
                     <MaterialIcons name='fast-rewind' size={40} color="#555555" />
                 </TouchableOpacity>
-                <PlayButton player={player} />
+                <TouchableOpacity onPress={async () => await onPlay()}>
+                    <MaterialIcons
+                        name={player.playing ? "pause-circle" : "play-circle"}
+                        size={80}
+                        color="#555555"
+                        style={{ marginRight: 8 }}
+                    />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={fastForward}>
                     <MaterialIcons name='fast-forward' size={40} color="#555555" />
                 </TouchableOpacity>

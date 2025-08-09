@@ -2,16 +2,17 @@ import { getDb } from "./initdb";
 import { ProgressRow } from "./models";
 
 
-export async function setFileProgressLcl(bookId: number, fileId: number, progressMs: number) {
+export async function setFileProgressLcl(bookId: number, fileId: number, progressMs: number, complete: boolean) {
     const db = await getDb();
     try {
         await db.runAsync(
-            `INSERT INTO progress (book_id, file_id, progress_ms, updated_at)
-     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            `INSERT INTO progress (book_id, file_id, progress_ms, complete, updated_at)
+     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
      ON CONFLICT(file_id, book_id) DO UPDATE SET
        progress_ms = excluded.progress_ms,
-       updated_at = CURRENT_TIMESTAMP`,
-            [bookId, fileId, progressMs]
+       complete = excluded.complete,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+            [bookId, fileId, progressMs, complete ? 1 : 0]
         );
     } catch (e) { console.error(e) }
 }
@@ -24,7 +25,7 @@ export async function setFileProgressBatch(items: { bookId: number, fileId: numb
          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
          ON CONFLICT(file_id) DO UPDATE SET
            progress_ms = excluded.progress_ms,
-           updated_at = CURRENT_TIMESTAMP`,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
                 [bookId, fileId, progressMs]
             );
         }

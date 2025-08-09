@@ -54,6 +54,7 @@ export function useAudioController() {
                         currentBook?.id as number,
                         queue[0].id as number,
                         player.currentTime * 1000,
+                        false
                     );
                     await saveProgressServer(1, currentBook?.id as number, queue[0].id as number, Math.floor(player.currentTime * 1000), false)
 

@@ -1,14 +1,11 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useAudioController } from '../hooks/useAudioController';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import { API_URL } from '@/data/api/api';
 import { router, usePathname } from "expo-router";
-import PlayButton from './play-button';
+import { MaterialIcons } from '@expo/vector-icons';
 export default function MiniPlayer() {
-
-
     const { player, onPlay } = useAudioController()
     const currentBook = useAudioPlayerStore(s => s.currentBook)
 
@@ -18,7 +15,6 @@ export default function MiniPlayer() {
     const pathname = usePathname();
     if (pathname.startsWith("/player/"))
         return null
-
 
     return (
         <Pressable onPress={() => router.push(`/player/${currentBook?.id}`)} >
@@ -35,16 +31,14 @@ export default function MiniPlayer() {
                 <View style={styles.textContainer}>
                     <Text numberOfLines={1} style={styles.title}>{currentBook?.title}</Text>
                 </View>
-
-                {/* Right - Controls */}
-                {/* <TouchableOpacity onPress={onPlay} style={styles.playButton}>
-                    <Ionicons
-                        name={player.playing ? "pause" : "play"}
-                        size={24}
-                        color="#fff"
+                <TouchableOpacity onPress={async () => await onPlay()}>
+                    <MaterialIcons
+                        name={player.playing ? "pause-circle" : "play-circle"}
+                        size={80}
+                        color="#555555"
+                        style={{ marginRight: 8 }}
                     />
-                </TouchableOpacity> */}
-                <PlayButton player={player} />
+                </TouchableOpacity>
                 {/* Progress Bar */}
                 <View style={styles.progressBackground}>
                     <View style={[styles.progressFill, { flex: progress }]} />
