@@ -39,8 +39,7 @@ export default function Seeker({ player }: { player: AudioPlayer }) {
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: 25,
     },
     timeRow: {
         flexDirection: 'row',

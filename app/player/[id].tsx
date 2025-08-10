@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { getAllBooks, getBook, getFilesForBook } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import Controls from '@/components/player/controls';
@@ -36,10 +36,10 @@ export default function Player() {
         5. Starts playing
         */
         const savePreviousBookProgress = async () => {
-            console.log("Book switched from: ", currentBook && currentBook.title)
-            console.log("Saving previous progress", currentBook.title, formatTime(player?.currentTime), "\n")
-            console.log(queue && queue[0].id, queue[0].file_name)
-            console.log(" ")
+            // console.log("Book switched from: ", currentBook && currentBook.title)
+            // console.log("Saving previous progress", currentBook.title, formatTime(player?.currentTime), "\n")
+            // console.log(queue && queue[0].id, queue[0].file_name)
+            // console.log(" ")
             if (queue && queue.length > 0) {
                 await saveProgress(
                     currentBook?.id as number,
@@ -212,13 +212,13 @@ export default function Player() {
     }
 
     return (
-        <View style={styles.container}>
-            <BookInfo />
-            <Controls />
-            <TouchableOpacity onPress={async () => console.log(await getProgressForBookLcl(bookId))}>
-                <MaterialIcons name='face-2' size={40} />
-            </TouchableOpacity>
-        </View>
+        <>
+            <Stack.Screen options={{ headerShown: false }} />
+            <View style={styles.container}>
+                <BookInfo currentBook={currentBook} />
+                <Controls />
+            </View>
+        </>
     )
 }
 

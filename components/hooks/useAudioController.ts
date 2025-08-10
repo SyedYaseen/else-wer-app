@@ -1,5 +1,4 @@
-import { useAudioPlayerStatus } from 'expo-audio';
-import { useEffect, useState, useRef } from 'react';
+import { useState } from 'react';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import { saveProgress } from '@/data/api/api';
 

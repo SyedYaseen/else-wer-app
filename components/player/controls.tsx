@@ -3,10 +3,14 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { useAudioController } from '../hooks/useAudioController'
 import Seeker from './seeker'
 import { useAudioPlayerStore } from '../store/audio-player-store'
+import PlaybackSpeedToggleButton from './secondary-controls/playback-speed'
+import { useState } from 'react'
+import SecondaryControls from './secondary-controls/secondary-controls'
 
 export default function Controls() {
     const { player, onPlay, rewind, fastForward } = useAudioController()
     const queue = useAudioPlayerStore(s => s.queue)
+    const [speed, setSpeed] = useState(1);
 
     if (!player) {
         console.error("Player object not initialized")
@@ -14,8 +18,7 @@ export default function Controls() {
     }
 
     return (
-        <View style={{ flex: 1 }}>
-            {queue && queue.length > 0 && <Text>In queue: {queue.length} Current: {queue[0].file_name}</Text>}
+        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
             <Seeker player={player} />
             <View style={styles.actions}>
                 <TouchableOpacity onPress={rewind}>
@@ -33,6 +36,7 @@ export default function Controls() {
                     <MaterialIcons name='fast-forward' size={40} color="#555555" />
                 </TouchableOpacity>
             </View>
+            <SecondaryControls />
 
 
         </View >
@@ -41,10 +45,23 @@ export default function Controls() {
 
 const styles = StyleSheet.create({
     actions: {
-        flex: 1,
+        marginVertical: 20,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection: 'row',
         gap: 40,
+    },
+    secondaryControls: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        alignItems: "center",
+        // backgroundColor: "#116FAF",
+        paddingVertical: 12,
+        borderRadius: 12,
+        // stick to bottom visually because container uses space-between
+    },
+    iconButton: {
+        backgroundColor: "#111111",
+        paddingHorizontal: 16,
     },
 })
