@@ -98,19 +98,42 @@ export async function removeLocalBook(bookId: number) {
     }
 }
 
-export async function saveProgressServer(userId: number, bookId: number, fileId: number, position: number, complete: boolean) {
+export async function saveProgressServer(
+    userId: number,
+    bookId: number,
+    fileId: number,
+    position: number,
+    complete: boolean
+) {
     try {
-        await fetch(`${API_URL}/update_progress`, {
+        const body = JSON.stringify({
+            user_id: userId,
+            book_id: bookId,
+            file_id: fileId,
+            progress_ms: Math.floor(position),
+            complete: complete,
+        })
+
+        console.log("Prog body", body)
+
+        const response = await fetch(`${API_URL}/update_progress`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, book_id: bookId, file_id: fileId, progress_ms: position, complete: complete }),
-        })
-    }
-    catch (e) {
-        console.error("Err updaing progressToServer", e)
+            body
+        });
+
+        // Add this debug log:
+        console.log("Server response status:", response.status);
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Server error:", errorData);
+            throw new Error(`Server returned ${response.status}`);
+        }
+    } catch (e) {
+        console.error("Err updating progressToServer", e);
+        throw e;
     }
 }
-
 export async function getFileProgressServer(userId: number, bookId: number, fileId: number) {
     const res = await fetch(
         `${API_URL}/get_file_progress/${userId}/${bookId}/${fileId}`

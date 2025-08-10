@@ -1,8 +1,7 @@
 import { useAudioPlayerStatus } from 'expo-audio';
 import { useEffect, useState, useRef } from 'react';
 import { useAudioPlayerStore } from '../store/audio-player-store';
-import { saveProgressServer } from '@/data/api/api';
-import { setFileProgressLcl } from '@/data/database/sync-repo';
+import { saveProgress } from '@/app/player/[id]';
 
 export function useAudioController() {
     const [loading, setLoading] = useState(false)
@@ -50,22 +49,20 @@ export function useAudioController() {
                 if (player.playing) {
                     player.pause()
 
-                    await setFileProgressLcl(
-                        currentBook?.id as number,
+                    await saveProgress(currentBook?.id as number,
                         queue[0].id as number,
                         player.currentTime * 1000,
-                        false
-                    );
-                    await saveProgressServer(1, currentBook?.id as number, queue[0].id as number, Math.floor(player.currentTime * 1000), false)
+                        false)
 
                     console.log("save compelte")
                 } else {
                     console.log(player)
-                    if (!player.isLoaded) { // Book already exists so just resume
-                        player.replace(queue[0].local_path as string)
-                        console.log("time at resume", playerStatus.currentTime)
-                    }
-                    player.play()
+                    // if (!player.isLoaded) {
+                    //     player.replace(queue[0].local_path as string)
+                    //     console.log("time at resume", playerStatus.currentTime)
+                    // }
+                    if (player.isLoaded)
+                        player.play() // Book already exists so just resume
                 }
             }
         } catch (e) {

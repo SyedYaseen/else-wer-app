@@ -9,6 +9,34 @@ import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import { getProgressForBookLcl, setFileProgressLcl } from '@/data/database/sync-repo';
 import { getBookProgressServer, saveProgressServer } from '@/data/api/api';
 import { useUpdateQueue } from '@/components/hooks/useInitQueue';
+import { formatTime } from '@/utils/formatTime';
+
+// TODO: Move to another file - causing cycle issue
+export const saveProgress = async (
+    bookId: number,
+    fileId: number,
+    progress_ms: number,
+    complete: boolean,
+    userId: number = 1, // Optional: Make this configurable
+) => {
+    try {
+        await Promise.all([
+            setFileProgressLcl(bookId, fileId, progress_ms, complete),
+            saveProgressServer(userId, bookId, fileId, progress_ms, complete),
+        ]);
+        console.log(
+            "Saved progress",
+            bookId,
+            fileId,
+            formatTime(progress_ms / 1000),
+            complete,
+        );
+    } catch (error) {
+        console.error("Failed to save progress:", error);
+        // Optionally rethrow if the caller should handle it
+        throw error;
+    }
+};
 
 export default function Player() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,29 +45,36 @@ export default function Player() {
     const [error, setError] = useState<null | string>(null);
     const player = useAudioPlayerStore(s => s.player)
     useUpdateQueue(player!)
-    // const playerStatus = useAudioPlayerStatus(player)
 
     const currentBook = useAudioPlayerStore(s => s.currentBook)
     const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)
     const setFiles = useAudioPlayerStore(s => s.setFiles)
     const setQueue = useAudioPlayerStore(s => s.setQueue)
-    const setInitpos = useAudioPlayerStore(s => s.setInitpos)
     const queue = useAudioPlayerStore(s => s.queue)
 
     if (!player) return null;
 
     useEffect(() => {
-        if (currentBook && currentBook.id !== bookId && queue && queue.length > 0) {
-            (async () => {
-                console.log("Saving current playing book progress", currentBook.title, player?.currentTime * 1000)
-                await setFileProgressLcl(
+        /*
+        1. Loads book if id from queryParam changes
+        2. Save current playing (if playing) to server
+        3. Loads queue for new book, handles conflicts
+        4. Sets Queue for next iteration
+        5. Starts playing
+        */
+        const savePreviousBookProgress = async () => {
+            console.log("Book switched from: ", currentBook && currentBook.title)
+            console.log("Saving previous progress", currentBook.title, formatTime(player?.currentTime), "\n")
+            console.log(queue && queue[0].id, queue[0].file_name)
+            console.log(" ")
+            if (queue && queue.length > 0) {
+                await saveProgress(
                     currentBook?.id as number,
                     queue[0].id as number,
-                    player?.currentTime * 1000 || player?.duration * 1000,
+                    player?.currentTime * 1000,
                     player.currentTime > player.duration - 3
-                );
-                await saveProgressServer(1, currentBook?.id as number, queue[0].file_id as number, Math.floor(player.currentTime * 1000), player.currentTime > player.duration - 3)
-            })()
+                )
+            }
         }
 
         const loadBook = async () => {
@@ -70,16 +105,17 @@ export default function Player() {
                 setCurrentBook(bookData);
                 setFiles(files)
 
-                console.log("Fetching progress and building queue")
+                console.log("Building queue for", bookData.title)
+                console.log(" ")
                 let pos = 0
 
                 let progressLcl = await getProgressForBookLcl(bookId)
                 let progressServer = await getBookProgressServer(1, bookId)
-
+                let q = files
                 // No progress - Start book
                 if (progressLcl.length === 0 && progressServer.length === 0) {
-                    setQueue(files)
-                    return
+                    // setQueue(files)
+
                 }
 
                 const lclCompleteCount = progressLcl.reduce((prev, curr) =>
@@ -90,13 +126,11 @@ export default function Player() {
                     curr.complete ? prev + 1 : prev
                     , 0)
 
-                console.log(progressServer)
+                // console.log(progressServer)
 
                 // If book was marked complete - Ideally this shouldnt happen here, but you never know
                 if (lclCompleteCount === files.length || srvrCompleteCount === files.length) {
                     console.log("Book was marked complete. Starting from beginnig")
-                    setQueue(files)
-                    return
                 }
 
                 // If only one of the sources have progress for file
@@ -108,12 +142,9 @@ export default function Player() {
                         new Date(prev?.updated_at) > new Date(curr?.updated_at) ? prev : curr
                     )
 
-                    const q = position.complete ? files.filter(f => f.id > position.file_id) : files.filter(f => f.id >= position.file_id)
+                    q = position.complete ? files.filter(f => f.id > position.file_id) : files.filter(f => f.id >= position.file_id)
 
                     pos = position.complete ? 0 : position.progress_ms
-                    setQueue(q)
-                    setInitpos(pos / 1000)
-                    return
                 }
 
                 // Find most recent updateon - from all files
@@ -129,21 +160,28 @@ export default function Player() {
                     )
 
                     const recentPos = new Date(lclpos.updated_at) > new Date(srvrPos.updated_at) ? lclpos : srvrPos
-                    const q = recentPos.complete ? files.filter(f => f.id > recentPos.file_id) : files.filter(f => f.id >= recentPos.file_id)
+                    q = recentPos.complete ? files.filter(f => f.id > recentPos.file_id) : files.filter(f => f.id >= recentPos.file_id)
 
                     pos = recentPos.complete ? 0 : recentPos.progress_ms
 
+
                     console.log("===== Conflcit block =====")
-                    console.log("lcl", lclpos)
-                    console.log("srv", srvrPos)
-                    console.log("rec", recentPos, new Date(lclpos.updated_at), new Date(srvrPos.updated_at), new Date(lclpos.updated_at) > new Date(srvrPos.updated_at))
-                    console.log("latest pos", pos)
+                    console.log(lclpos.book_id)
+                    console.log("lcl file", lclpos.file_id, lclpos.complete ? "complete" : "pending", formatTime(lclpos.progress_ms), lclpos.updated_at, "\n\n")
+                    console.log("srv file", srvrPos.file_id, srvrPos.complete ? "complete" : "pending", formatTime(srvrPos.progress_ms), srvrPos.updated_at, "\n\n")
+                    console.log("rec file", recentPos.file_id, recentPos.complete ? "complete" : "pending", formatTime(recentPos.progress_ms), recentPos.updated_at, "\n\n")
+                    // console.log("rec", recentPos, new Date(lclpos.updated_at), new Date(srvrPos.updated_at), new Date(lclpos.updated_at) > new Date(srvrPos.updated_at))
+                    console.log("Latest pos", formatTime(pos))
                     console.log("===== Conflcit block end =====")
 
-                    if (q && q.length > 0) {
-                        setQueue(q)
-                        setInitpos(pos / 1000)
-                    }
+                }
+
+                setQueue(q)
+                const next = q[0];
+                if (next?.local_path) {
+                    player?.replace(next.local_path);
+                    player.seekTo(pos / 1000)
+                    player?.play()
                 }
             } catch (err) {
                 console.error("Error loading book:", err)
@@ -152,11 +190,19 @@ export default function Player() {
                 setLoading(false)
             }
         }
-        if (bookId) {
-            console.log("effect running on", bookId)
+
+        if (currentBook && currentBook.id !== bookId) {
+            savePreviousBookProgress()
+        }
+
+        if (!currentBook || currentBook.id !== bookId) {
+            console.log("Load book: ", bookId)
+            console.log(" ")
             loadBook()
         }
     }, [bookId])
+
+    // console.log("Plyer q len", queue?.length)
 
     if (loading) {
         return (

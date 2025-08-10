@@ -7,7 +7,7 @@ export async function setFileProgressLcl(bookId: number, fileId: number, progres
     try {
         await db.runAsync(
             `INSERT INTO progress (book_id, file_id, progress_ms, complete, updated_at)
-     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+     VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
      ON CONFLICT(file_id, book_id) DO UPDATE SET
        progress_ms = excluded.progress_ms,
        complete = excluded.complete,
@@ -22,7 +22,7 @@ export async function setFileProgressBatch(items: { bookId: number, fileId: numb
         for (const { bookId, fileId, progressMs } of items) {
             await db.runAsync(
                 `INSERT INTO progress (book_id, file_id, progress_ms, updated_at)
-         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+         VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
          ON CONFLICT(file_id) DO UPDATE SET
            progress_ms = excluded.progress_ms,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
