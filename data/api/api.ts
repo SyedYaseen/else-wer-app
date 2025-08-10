@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from "expo-file-system";
 import { unzip } from "react-native-zip-archive";
 import { ProgressRow } from '../database/models';
+import { setFileProgressLcl } from '../database/sync-repo';
+import { formatTime } from '@/utils/formatTime';
 
 export const API_URL = "http://192.168.1.3:3000/api";
 
@@ -97,6 +99,33 @@ export async function removeLocalBook(bookId: number) {
         console.error(e)
     }
 }
+
+// Sync
+export const saveProgress = async (
+    bookId: number,
+    fileId: number,
+    progress_ms: number,
+    complete: boolean,
+    userId: number = 1, // Optional: Make this configurable
+) => {
+    try {
+        await Promise.all([
+            setFileProgressLcl(bookId, fileId, progress_ms, complete),
+            saveProgressServer(userId, bookId, fileId, progress_ms, complete),
+        ]);
+        console.log(
+            "Saved progress",
+            bookId,
+            fileId,
+            formatTime(progress_ms / 1000),
+            complete,
+        );
+    } catch (error) {
+        console.error("Failed to save progress:", error);
+        // Optionally rethrow if the caller should handle it
+        throw error;
+    }
+};
 
 export async function saveProgressServer(
     userId: number,

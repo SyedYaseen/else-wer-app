@@ -8,43 +8,16 @@ import BookInfo from '@/components/player/book-info';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import { getProgressForBookLcl, setFileProgressLcl } from '@/data/database/sync-repo';
 import { getBookProgressServer, saveProgressServer } from '@/data/api/api';
-import { useUpdateQueue } from '@/components/hooks/useInitQueue';
 import { formatTime } from '@/utils/formatTime';
-
-// TODO: Move to another file - causing cycle issue
-export const saveProgress = async (
-    bookId: number,
-    fileId: number,
-    progress_ms: number,
-    complete: boolean,
-    userId: number = 1, // Optional: Make this configurable
-) => {
-    try {
-        await Promise.all([
-            setFileProgressLcl(bookId, fileId, progress_ms, complete),
-            saveProgressServer(userId, bookId, fileId, progress_ms, complete),
-        ]);
-        console.log(
-            "Saved progress",
-            bookId,
-            fileId,
-            formatTime(progress_ms / 1000),
-            complete,
-        );
-    } catch (error) {
-        console.error("Failed to save progress:", error);
-        // Optionally rethrow if the caller should handle it
-        throw error;
-    }
-};
-
+import { saveProgress } from '@/data/api/api';
+import { useProgressUpdate } from '@/components/hooks/useProgressUpdate';
 export default function Player() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const bookId = parseInt(id);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<null | string>(null);
     const player = useAudioPlayerStore(s => s.player)
-    useUpdateQueue(player!)
+    useProgressUpdate(player!)
 
     const currentBook = useAudioPlayerStore(s => s.currentBook)
     const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook)

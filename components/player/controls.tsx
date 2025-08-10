@@ -5,11 +5,8 @@ import Seeker from './seeker'
 import { useAudioPlayerStore } from '../store/audio-player-store'
 
 export default function Controls() {
-    const { rewind, fastForward } = useAudioController()
-
-    const player = useAudioPlayerStore(s => s.player)
+    const { player, onPlay, rewind, fastForward } = useAudioController()
     const queue = useAudioPlayerStore(s => s.queue)
-    const { onPlay } = useAudioController()
 
     if (!player) {
         console.error("Player object not initialized")

@@ -1,26 +1,21 @@
 import { useAudioPlayerStatus } from 'expo-audio';
 import { useEffect, useState, useRef } from 'react';
 import { useAudioPlayerStore } from '../store/audio-player-store';
-import { saveProgress } from '@/app/player/[id]';
+import { saveProgress } from '@/data/api/api';
 
 export function useAudioController() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<null | string>(null)
-
     const player = useAudioPlayerStore(s => s.player)
+
     if (!player) {
         setError("No player exists")
         console.error("No player exists")
         throw new Error("Player not initialized")
     }
 
-    const playerStatus = useAudioPlayerStatus(player)
-
     const currentBook = useAudioPlayerStore(s => s.currentBook)
     const queue = useAudioPlayerStore(s => s.queue)
-    const popQueue = useAudioPlayerStore(s => s.popQueue)
-
-
 
     const rewind = () => {
         if (player.currentTime - 30 > 0) {
@@ -45,7 +40,6 @@ export function useAudioController() {
     const onPlay = async () => {
         try {
             if (queue && queue.length > 0) {
-
                 if (player.playing) {
                     player.pause()
 
@@ -53,16 +47,9 @@ export function useAudioController() {
                         queue[0].id as number,
                         player.currentTime * 1000,
                         false)
-
-                    console.log("save compelte")
                 } else {
-                    console.log(player)
-                    // if (!player.isLoaded) {
-                    //     player.replace(queue[0].local_path as string)
-                    //     console.log("time at resume", playerStatus.currentTime)
-                    // }
                     if (player.isLoaded)
-                        player.play() // Book already exists so just resume
+                        player.play()
                 }
             }
         } catch (e) {
