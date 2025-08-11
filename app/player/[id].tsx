@@ -6,11 +6,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import Controls from '@/components/player/controls';
 import BookInfo from '@/components/player/book-info';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
-import { getProgressForBookLcl, setFileProgressLcl } from '@/data/database/sync-repo';
-import { getBookProgressServer, saveProgressServer } from '@/data/api/api';
-import { formatTime } from '@/utils/formatTime';
 import { saveProgress } from '@/data/api/api';
 import { useProgressUpdate } from '@/components/hooks/useProgressUpdate';
+import { getBookProgress } from '@/data/lib/conflict-handling';
 export default function Player() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const bookId = parseInt(id);
@@ -80,74 +78,7 @@ export default function Player() {
 
                 console.log("Building queue for", bookData.title)
                 console.log(" ")
-                let pos = 0
-
-                let progressLcl = await getProgressForBookLcl(bookId)
-                let progressServer = await getBookProgressServer(bookId)
-                let q = files
-                // No progress - Start book
-                if (progressLcl.length === 0 && progressServer.length === 0) {
-                    // setQueue(files)
-
-                }
-
-                const lclCompleteCount = progressLcl.reduce((prev, curr) =>
-                    curr.complete ? prev + 1 : prev
-                    , 0)
-
-                const srvrCompleteCount = progressServer.reduce((prev, curr) =>
-                    curr.complete ? prev + 1 : prev
-                    , 0)
-
-                // console.log(progressServer)
-
-                // If book was marked complete - Ideally this shouldnt happen here, but you never know
-                if (lclCompleteCount === files.length || srvrCompleteCount === files.length) {
-                    console.log("Book was marked complete. Starting from beginnig")
-                }
-
-                // If only one of the sources have progress for file
-                if ((progressLcl.length === 0 && progressServer.length !== 0) || (progressLcl.length !== 0 && progressServer.length === 0)) {
-                    const validPos = progressLcl.length === 0 ? progressServer : progressLcl
-
-                    // get recent update
-                    const position = validPos.reduce((prev, curr) =>
-                        new Date(prev?.updated_at) > new Date(curr?.updated_at) ? prev : curr
-                    )
-
-                    q = position.complete ? files.filter(f => f.id > position.file_id) : files.filter(f => f.id >= position.file_id)
-
-                    pos = position.complete ? 0 : position.progress_ms
-                }
-
-                // Find most recent updateon - from all files
-                // Handle conflict by comparing both server and lcl updateon
-                if (progressLcl.length > 0 && progressServer.length > 0) {
-
-                    const lclpos = progressLcl.reduce((prev, curr) =>
-                        new Date(prev?.updated_at) > new Date(curr?.updated_at) ? prev : curr
-                    )
-
-                    const srvrPos = progressServer.reduce((prev, curr) =>
-                        new Date(prev?.updated_at) > new Date(curr?.updated_at) ? prev : curr
-                    )
-
-                    const recentPos = new Date(lclpos.updated_at) > new Date(srvrPos.updated_at) ? lclpos : srvrPos
-                    q = recentPos.complete ? files.filter(f => f.id > recentPos.file_id) : files.filter(f => f.id >= recentPos.file_id)
-
-                    pos = recentPos.complete ? 0 : recentPos.progress_ms
-
-
-                    console.log("===== Conflcit block =====")
-                    console.log(lclpos.book_id)
-                    console.log("lcl file", lclpos.file_id, lclpos.complete ? "complete" : "pending", formatTime(lclpos.progress_ms), lclpos.updated_at, "\n\n")
-                    console.log("srv file", srvrPos.file_id, srvrPos.complete ? "complete" : "pending", formatTime(srvrPos.progress_ms), srvrPos.updated_at, "\n\n")
-                    console.log("rec file", recentPos.file_id, recentPos.complete ? "complete" : "pending", formatTime(recentPos.progress_ms), recentPos.updated_at, "\n\n")
-                    // console.log("rec", recentPos, new Date(lclpos.updated_at), new Date(srvrPos.updated_at), new Date(lclpos.updated_at) > new Date(srvrPos.updated_at))
-                    console.log("Latest pos", formatTime(pos))
-                    console.log("===== Conflcit block end =====")
-
-                }
+                const { q, pos } = await getBookProgress(bookId, files)
 
                 setQueue(q)
                 const next = q[0];

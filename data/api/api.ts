@@ -171,8 +171,7 @@ export async function getFileProgressServer(bookId: number, fileId: number) {
     );
     if (!res.ok) return 0;
 
-    const data = await res.json();
-    return data.progress_time_marker ?? 0;
+    return await res.json();
 }
 
 export async function getBookProgressServer(bookId: number) {

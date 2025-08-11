@@ -5,6 +5,9 @@ import { useAudioPlayerStore } from "@/components/store/audio-player-store";
 import { FileRow } from "@/data/database/models";
 import { formatTime } from "@/utils/formatTime";
 import { Dimensions } from "react-native";
+import { getFileProgressLcl } from "@/data/database/sync-repo";
+import { getFileProgressServer, saveProgress } from "@/data/api/api";
+import { getFileProgress } from "@/data/lib/conflict-handling";
 
 
 const screenHeight = Dimensions.get("window").height;
@@ -12,38 +15,6 @@ const screenHeight = Dimensions.get("window").height;
 export default function ChaptersButton() {
     const [show, setShow] = useState(false);
     const files = useAudioPlayerStore(s => s.files)
-    const queue = useAudioPlayerStore(s => s.queue)
-
-
-    const ChapterText = ({ fileRow }: { fileRow: FileRow }) => {
-        if (!queue || queue.length === 0) {
-            return (
-                <TouchableOpacity style={styles.option}>
-                    <Text style={styles.optionTextFaded}>{fileRow.file_name}</Text>
-                </TouchableOpacity>
-            )
-        }
-
-
-        const current = queue && queue[0]
-
-        return (
-            <TouchableOpacity style={styles.option}>
-                <Text style={[
-                    current.file_id <= fileRow.file_id ? styles.optionText : styles.optionTextFaded,
-                    current.file_id === fileRow.file_id && styles.currentFileText
-                ]}>{fileRow.file_name}  </Text>
-
-                {fileRow.duration && <Text style={[
-                    current.file_id <= fileRow.file_id ? styles.optionText : styles.optionTextFaded,
-                    current.file_id === fileRow.file_id && styles.currentFileText
-                ]} >{formatTime(fileRow?.duration / 1000)}</Text>
-                }
-            </TouchableOpacity>
-        )
-
-
-    }
 
     return (
         <>
@@ -66,6 +37,55 @@ export default function ChaptersButton() {
             </Modal>
         </>
     );
+}
+
+const ChapterText = ({ fileRow }: { fileRow: FileRow }) => {
+    const queue = useAudioPlayerStore(s => s.queue)
+    const setQueue = useAudioPlayerStore(s => s.setQueue)
+    const files = useAudioPlayerStore(s => s.files)
+
+    if (!queue || queue.length === 0) {
+        return (
+            <TouchableOpacity style={styles.option}>
+                <Text style={styles.optionTextFaded}>{fileRow.file_name}</Text>
+            </TouchableOpacity>
+        )
+    }
+
+    const current = queue && queue[0]
+    const player = useAudioPlayerStore(s => s.player)
+
+    const switchChapter = async () => {
+        console.log("Swithcing to ", fileRow.file_name)
+        if (fileRow.local_path) {
+            const newQueue = files?.filter(f => f.file_id >= fileRow.file_id)
+            if (newQueue && newQueue.length > 0) {
+                const currentFile = queue[0]
+                await saveProgress(currentFile.book_id, currentFile.id, player?.currentTime! * 1000, player?.currentTime! > player?.duration! - 5)
+                const pos = await getFileProgress(fileRow.book_id, fileRow.id)
+
+                setQueue(newQueue)
+                player?.replace(newQueue[0].local_path!)
+                player?.seekTo(pos / 1000)
+                player?.play()
+            }
+        }
+    }
+
+    return (
+        <TouchableOpacity style={styles.option} onPress={switchChapter}>
+            <Text style={[
+                current.file_id <= fileRow.file_id ? styles.optionText : styles.optionTextFaded,
+                current.file_id === fileRow.file_id && styles.currentFileText
+            ]}>{fileRow.file_name}  </Text>
+
+            {fileRow.duration && <Text style={[
+                current.file_id <= fileRow.file_id ? styles.optionText : styles.optionTextFaded,
+                current.file_id === fileRow.file_id && styles.currentFileText
+            ]} >{formatTime(fileRow?.duration / 1000)}</Text>
+            }
+        </TouchableOpacity>
+    )
 }
 
 const styles = StyleSheet.create({

@@ -44,11 +44,11 @@ export async function getProgressForBookLcl(bookId: number) {
     );
 }
 
-export async function getFileProgress(bookId: number, fileId: number): Promise<number> {
+export async function getFileProgressLcl(bookId: number, fileId: number): Promise<ProgressRow | null> {
     const db = await getDb();
-    const row = await db.getFirstAsync<{ progress_ms: number }>(
-        `SELECT progress_ms FROM progress WHERE book_id = ? AND file_id = ? LIMIT 1`,
+    const row = await db.getFirstAsync<ProgressRow>(
+        `SELECT * FROM progress WHERE book_id = ? AND file_id = ? LIMIT 1`,
         [bookId, fileId]
     );
-    return row?.progress_ms ?? 0;
+    return row
 }
