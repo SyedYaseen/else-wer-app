@@ -1,6 +1,6 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
-import { API_URL, downloadAndUnzip, fetchFileMetaFromServer, getBookProgressServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
+import { API_URL, downloadAndUnzip, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
 import { deleteBookDb, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';

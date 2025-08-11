@@ -61,6 +61,7 @@ function RootLayoutNav() {
     (async () => {
       try {
         // await resetDb()
+        // await AsyncStorage.clear()
         await initDb();
         console.log("Database initialized!");
       } catch (err) {

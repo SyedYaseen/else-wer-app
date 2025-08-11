@@ -83,7 +83,7 @@ export default function Player() {
                 let pos = 0
 
                 let progressLcl = await getProgressForBookLcl(bookId)
-                let progressServer = await getBookProgressServer(1, bookId)
+                let progressServer = await getBookProgressServer(bookId)
                 let q = files
                 // No progress - Start book
                 if (progressLcl.length === 0 && progressServer.length === 0) {

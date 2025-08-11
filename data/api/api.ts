@@ -1,10 +1,10 @@
-import { BooksResponse } from '@/app/(tabs)';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from "expo-file-system";
 import { unzip } from "react-native-zip-archive";
 import { ProgressRow } from '../database/models';
 import { setFileProgressLcl } from '../database/sync-repo';
 import { formatTime } from '@/utils/formatTime';
+import { apiFetch } from './fetch-wrapper';
 
 export const API_URL = "http://192.168.1.3:3000/api";
 
@@ -30,19 +30,19 @@ export async function logout(navigation: any) {
 
 // Books
 export async function scanServerFiles() {
-    await fetch(`${API_URL}/scan_files`)
+    await apiFetch("/scan_files")
 }
 
 
-export async function fetchBooks(): Promise<BooksResponse> {
+export async function fetchBooks() {
     await scanServerFiles()
-    const res = await fetch(`${API_URL}/list_books`);
+    const res = await apiFetch("/list_books")
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
     return await res.json();
 }
 
 export async function fetchFileMetaFromServer(id: number) {
-    const res = await fetch(`${API_URL}/file_metadata/${id}`);
+    const res = await apiFetch(`/file_metadata/${id}`);
     const data = await res.json()
     return data;
 }
@@ -53,12 +53,16 @@ export async function downloadAndUnzip(bookId: number) {
     const zipPath = `${ROOT}${bookId}.zip`;
     const destPath = `${ROOT}${bookId}/`;
     const url = `${API_URL}/download_book/${bookId}`
-
+    const token = await AsyncStorage.getItem('token')
     // Ensure "books" directory exists
     await FileSystem.makeDirectoryAsync(ROOT, { intermediates: true });
 
     console.log("Downloading:", url, "->", zipPath);
-    await FileSystem.downloadAsync(url, zipPath);
+    await FileSystem.downloadAsync(url, zipPath, {
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
 
     console.log("Unzipping:", zipPath, "->", destPath);
     await unzip(zipPath, destPath);
@@ -106,12 +110,11 @@ export const saveProgress = async (
     fileId: number,
     progress_ms: number,
     complete: boolean,
-    userId: number = 1, // Optional: Make this configurable
 ) => {
     try {
         await Promise.all([
             setFileProgressLcl(bookId, fileId, progress_ms, complete),
-            saveProgressServer(userId, bookId, fileId, progress_ms, complete),
+            saveProgressServer(bookId, fileId, progress_ms, complete),
         ]);
         console.log(
             "Saved progress",
@@ -125,10 +128,9 @@ export const saveProgress = async (
         // Optionally rethrow if the caller should handle it
         throw error;
     }
-};
+}
 
 export async function saveProgressServer(
-    userId: number,
     bookId: number,
     fileId: number,
     position: number,
@@ -136,7 +138,6 @@ export async function saveProgressServer(
 ) {
     try {
         const body = JSON.stringify({
-            user_id: userId,
             book_id: bookId,
             file_id: fileId,
             progress_ms: Math.floor(position),
@@ -145,27 +146,28 @@ export async function saveProgressServer(
 
         console.log("Prog body", body)
 
-        const response = await fetch(`${API_URL}/update_progress`, {
+        const response = await apiFetch("/update_progress", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body
-        });
+        })
 
         // Add this debug log:
         console.log("Server response status:", response.status);
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Server error:", errorData);
-            throw new Error(`Server returned ${response.status}`);
+            const errorData = await response.json()
+            console.error("Server error:", errorData)
+            throw new Error(`Server returned ${response.status}`)
         }
     } catch (e) {
-        console.error("Err updating progressToServer", e);
-        throw e;
+        console.error("Err updating progressToServer", e)
+        throw e
     }
 }
-export async function getFileProgressServer(userId: number, bookId: number, fileId: number) {
-    const res = await fetch(
-        `${API_URL}/get_file_progress/${userId}/${bookId}/${fileId}`
+
+export async function getFileProgressServer(bookId: number, fileId: number) {
+    const res = await apiFetch(
+        `/get_file_progress/${bookId}/${fileId}`
     );
     if (!res.ok) return 0;
 
@@ -173,10 +175,9 @@ export async function getFileProgressServer(userId: number, bookId: number, file
     return data.progress_time_marker ?? 0;
 }
 
-
-export async function getBookProgressServer(userId: number, bookId: number) {
-    const res = await fetch(
-        `${API_URL}/get_book_progress/${userId}/${bookId}`
+export async function getBookProgressServer(bookId: number) {
+    const res = await apiFetch(
+        `/get_book_progress/${bookId}`
     );
     if (!res.ok) return [] as ProgressRow[]; // TODO
 
