@@ -34,7 +34,7 @@ export default function MiniPlayer() {
                 <TouchableOpacity onPress={async () => await onPlay()}>
                     <MaterialIcons
                         name={player.playing ? "pause-circle" : "play-circle"}
-                        size={80}
+                        size={40}
                         color="#555555"
                         style={{ marginRight: 8 }}
                     />

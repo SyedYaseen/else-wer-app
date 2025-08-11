@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     },
     timeText: {
         fontSize: 12,
-        color: '#555',
+        color: '#CCCCCC',
     },
     slider: {
         width: '100%',

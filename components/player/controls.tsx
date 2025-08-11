@@ -22,18 +22,18 @@ export default function Controls() {
             <Seeker player={player} />
             <View style={styles.actions}>
                 <TouchableOpacity onPress={rewind}>
-                    <MaterialIcons name='fast-rewind' size={40} color="#555555" />
+                    <MaterialIcons name='fast-rewind' size={40} color="#CCCCCC" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={async () => await onPlay()}>
                     <MaterialIcons
                         name={player.playing ? "pause-circle" : "play-circle"}
                         size={80}
-                        color="#555555"
+                        color="#CCCCCC"
                         style={{ marginRight: 8 }}
                     />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={fastForward}>
-                    <MaterialIcons name='fast-forward' size={40} color="#555555" />
+                    <MaterialIcons name='fast-forward' size={40} color="#CCCCCC" />
                 </TouchableOpacity>
             </View>
             <SecondaryControls />

@@ -44,19 +44,19 @@ const styles = StyleSheet.create({
     titleText: {
         fontSize: 28,
         fontWeight: "bold",
-        color: "#333",
+        color: "#CCCCCC",
         textAlign: "center",
     },
     authorText: {
         fontSize: 18,
         fontWeight: "300",
-        color: "#333",
+        color: "#CCCCCC",
         marginTop: 6,
     },
     chapterText: {
         fontSize: 14,
         fontWeight: "300",
-        color: "#333",
+        color: "#CCCCCC",
         marginTop: 4,
     },
 });

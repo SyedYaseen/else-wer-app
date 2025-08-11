@@ -19,7 +19,7 @@ export default function ChaptersButton() {
     return (
         <>
             <TouchableOpacity onPress={() => setShow(true)} style={styles.iconButton}>
-                <MaterialIcons name="menu-book" size={28} color="#555" />
+                <MaterialIcons name="menu-book" size={28} color="#CCCCCC" />
             </TouchableOpacity>
             <Modal transparent visible={show} animationType="slide">
                 <View style={styles.overlay}>

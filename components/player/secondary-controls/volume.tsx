@@ -25,7 +25,7 @@ export default function VolumeButton() {
                 }}
                 style={styles.iconButton}
             >
-                <MaterialIcons name="volume-up" size={28} color="#555" />
+                <MaterialIcons name="volume-up" size={28} color="#CCCCCC" />
             </TouchableOpacity>
 
             <Modal transparent visible={show} animationType="none">

@@ -8,7 +8,7 @@ export default function SleepTimerButton() {
     return (
         <>
             <TouchableOpacity onPress={() => setShow(true)} style={styles.iconButton}>
-                <MaterialIcons name="access-time" size={28} color="#555" />
+                <MaterialIcons name="access-time" size={28} color="#CCCCCC" />
             </TouchableOpacity>
 
             <Modal transparent visible={show} animationType="slide">

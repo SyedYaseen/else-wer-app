@@ -95,18 +95,18 @@ export default function BookDetails() {
                     {isDownloading && <LoadingSpinner />}
                     {!isDownloaded && !isDownloading ?
                         <TouchableOpacity onPress={handleDownload}>
-                            <MaterialIcons name='download' size={40} color="#555555" />
+                            <MaterialIcons name='download' size={40} color="#CCCCCC" />
                         </TouchableOpacity> :
 
                         <TouchableOpacity onPress={handlePlay}>
-                            <MaterialIcons name='play-circle' size={40} color="#555555" />
+                            <MaterialIcons name='play-circle' size={40} color="#CCCCCC" />
                         </TouchableOpacity>
                     }
                     {/* <TouchableOpacity onPress={() => console.log("Completed...")}>
                         <MaterialIcons name='check-circle' size={40} color="#555555" />
                     </TouchableOpacity> */}
                     <TouchableOpacity onPress={handleDelete}>
-                        <MaterialIcons name='delete' size={40} color="#FF5522" />
+                        <MaterialIcons name='delete' size={40} color="#CCCCCC" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'flex-start',
-        backgroundColor: '#FFF',
+        backgroundColor: '#1C1C1E',
     },
     coverContainer: {
         height: 300,
@@ -151,10 +151,11 @@ const styles = StyleSheet.create({
     titleText: {
         fontSize: 24,
         fontWeight: 'bold',
+        color: '#CCCCCC',
     },
     authorText: {
         fontSize: 18,
-        color: '#666',
+        color: '#CCCCCC',
     },
     actions: {
         flexDirection: 'row',
@@ -172,6 +173,6 @@ const styles = StyleSheet.create({
     descriptionText: {
         fontSize: 16,
         lineHeight: 24,
-        color: '#444',
+        color: '#CCCCCC',
     },
 });

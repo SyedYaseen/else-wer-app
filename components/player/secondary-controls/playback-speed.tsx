@@ -71,7 +71,7 @@ export default function PlaybackSpeedButton() {
 
 const styles = StyleSheet.create({
     iconButton: { padding: 10, alignItems: "center" },
-    speedText: { fontSize: 16, color: "#555", fontWeight: "600" },
+    speedText: { fontSize: 16, color: "#CCCCCC", fontWeight: "600" },
     overlay: { flex: 1 },
     popover: { backgroundColor: "#222", borderRadius: 8, padding: 6, width: 100 },
     option: { paddingVertical: 6, alignItems: "center" },

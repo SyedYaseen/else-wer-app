@@ -5,7 +5,6 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 function BookCard({ book }: { book: Audiobook }) {
-    // console.log(book)
     return (
         <Link
             href={{
@@ -20,15 +19,14 @@ function BookCard({ book }: { book: Audiobook }) {
         >
             <TouchableOpacity style={styles.card}>
                 <Image
-                    source={{
-                        uri: `${API_URL}${book.cover_art}`
-                    }}
+                    source={{ uri: `${API_URL}${book.cover_art}` }}
                     style={styles.cover}
+                    resizeMode="cover"
                 />
                 <View style={styles.details}>
-                    <Text style={styles.title}>{book.title}</Text>
-                    <Text style={styles.author}>{book.author}</Text>
-                    {book.series && <Text style={styles.series}>{book.series}</Text>}
+                    <Text style={styles.title} numberOfLines={1}>{book.title}</Text>
+                    <Text style={styles.author} numberOfLines={1}>{book.author}</Text>
+                    <Text style={styles.series} numberOfLines={1}>{book.series && book.series}</Text>
                 </View>
             </TouchableOpacity>
         </Link>
@@ -37,34 +35,41 @@ function BookCard({ book }: { book: Audiobook }) {
 
 const styles = StyleSheet.create({
     card: {
-        flexDirection: 'row',
-        padding: 12,
+        width: '100%',
         marginVertical: 6,
         borderRadius: 8,
+        backgroundColor: '#2A2A2A',
+        paddingBottom: 10,
     },
     cover: {
-        width: 80,
-        height: 80,
+        width: '100%', // Full width of card
+        height: 280, // Adjust height as needed
         borderRadius: 6,
-        backgroundColor: '#eee',
+        marginBottom: 10, // Space between image and text
     },
     details: {
-        flex: 1,
-        marginLeft: 12,
-        justifyContent: 'space-between',
+        width: '100%',
+        paddingHorizontal: 8,
     },
+
     title: {
         fontSize: 16,
-        fontWeight: '700',
+        fontWeight: '500',
+        color: "#CCCCCC",
+        textAlign: 'left',
+        marginBottom: 4,
     },
     author: {
         fontSize: 14,
-        color: '#555',
+        color: '#CCCCCC',
+        textAlign: 'left',
+        marginBottom: 4,
     },
     series: {
         fontSize: 13,
         fontStyle: 'italic',
         color: '#888',
+        textAlign: 'left',
     },
     button: {
         marginTop: 8,

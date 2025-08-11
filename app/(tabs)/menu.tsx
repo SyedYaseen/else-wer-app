@@ -1,6 +1,8 @@
+import { logout } from '@/data/api/api';
 import { resetDb } from '@/data/database/utils';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function MenuTab() {
   return (
@@ -13,6 +15,9 @@ export default function MenuTab() {
         <Pressable>
           <MaterialIcons style={{ color: "#FFF" }} name='cancel' size={48} onPress={resetDb} />
         </Pressable>
+        <TouchableOpacity onPress={async () => await logout(router)}>
+          <MaterialIcons name="logout" size={40} color="#FFF" />
+        </TouchableOpacity>
         <Text style={styles.text}>Menu items will appear here</Text>
       </View>
     </View>
