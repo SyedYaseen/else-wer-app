@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { useAudioController } from '../hooks/useAudioController';
 import { useAudioPlayerStore } from '../store/audio-player-store';
-import { API_URL } from '@/data/api/api';
 import { router, usePathname } from "expo-router";
 import { MaterialIcons } from '@expo/vector-icons';
+
 export default function MiniPlayer() {
     const { player, onPlay } = useAudioController()
     const currentBook = useAudioPlayerStore(s => s.currentBook)
@@ -15,17 +15,18 @@ export default function MiniPlayer() {
     const pathname = usePathname();
     if (pathname.startsWith("/player/"))
         return null
-
+    const server = useAudioPlayerStore(s => s.server)
     return (
         <Pressable onPress={() => router.push(`/player/${currentBook?.id}`)} >
             <View style={styles.container}>
                 {/* Left - Cover */}
-                <Image
+                {server && currentBook?.cover_art && <Image
                     source={{
-                        uri: `${API_URL}${currentBook?.cover_art}`
+                        uri: `${server}${currentBook?.cover_art}`
                     }}
                     style={styles.cover}
                 />
+                }
 
                 {/* Middle - Title */}
                 <View style={styles.textContainer}>

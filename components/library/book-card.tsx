@@ -1,10 +1,11 @@
-import { API_URL } from "@/data/api/api";
 import { Audiobook } from "@/data/database/models";
 import { Link } from "expo-router";
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAudioPlayerStore } from "../store/audio-player-store";
 
 function BookCard({ book }: { book: Audiobook }) {
+    const server = useAudioPlayerStore(s => s.server)
     return (
         <Link
             href={{
@@ -18,11 +19,11 @@ function BookCard({ book }: { book: Audiobook }) {
             asChild
         >
             <TouchableOpacity style={styles.card}>
-                <Image
-                    source={{ uri: `${API_URL}${book.cover_art}` }}
+                {server && book.cover_art && <Image
+                    source={{ uri: `${server}${book.cover_art}` }}
                     style={styles.cover}
                     resizeMode="cover"
-                />
+                />}
                 <View style={styles.details}>
                     <Text style={styles.title} numberOfLines={1}>{book.title}</Text>
                     <Text style={styles.author} numberOfLines={1}>{book.author}</Text>

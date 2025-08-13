@@ -1,6 +1,6 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
-import { API_URL, downloadAndUnzip, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
+import { downloadAndUnzip, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
 import { deleteBookDb, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, Button, Image, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router'
 import { Audiobook, FileRow } from '@/data/database/models';
+import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 
 type BookParams = {
     id: string;
@@ -75,15 +76,18 @@ export default function BookDetails() {
         router.push(`/player/${id}`)
     }
 
+    const server = useAudioPlayerStore(s => s.server)
+
     return (
         <View style={styles.container}>
             <View style={styles.coverContainer}>
-                <Image
+                {server && book?.cover_art && <Image
                     source={{
-                        uri: `${API_URL}${book?.cover_art}`
+                        uri: `${server}${book?.cover_art}`
                     }}
                     style={styles.coverImage}
                 />
+                }
             </View>
 
             <View style={styles.header}>

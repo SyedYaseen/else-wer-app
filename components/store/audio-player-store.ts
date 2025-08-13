@@ -3,6 +3,9 @@ import { Audiobook, FileRow } from '@/data/database/models';
 import { AudioPlayer } from 'expo-audio';
 
 interface AudioPlayerState {
+    server: string | null;
+    setServer: (server: string) => void;
+
     player: AudioPlayer | null;
     setPlayer: (player: AudioPlayer) => void;
 
@@ -26,6 +29,9 @@ interface AudioPlayerState {
 }
 
 export const useAudioPlayerStore = create<AudioPlayerState>((set) => ({
+    server: null,
+    setServer: (server) => set({ server }),
+
     player: null,
     setPlayer: (player: AudioPlayer) => set({ player }),
 

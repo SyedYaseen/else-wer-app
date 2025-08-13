@@ -6,8 +6,6 @@ import { setFileProgressLcl } from '../database/sync-repo';
 import { formatTime } from '@/utils/formatTime';
 import { apiFetch } from './fetch-wrapper';
 
-export const API_URL = "http://192.168.1.3:3000/api";
-
 // user login
 export async function login(server: string, username: string, password: string) {
     const res = await fetch(`${server}/api/login`, {
@@ -23,7 +21,7 @@ export async function login(server: string, username: string, password: string) 
 
 export async function logout(navigation: any) {
     await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('serverUrl');
+    await AsyncStorage.removeItem('server');
     navigation.replace('Login');
 }
 
@@ -50,9 +48,10 @@ export async function fetchFileMetaFromServer(id: number) {
 const ROOT = FileSystem.documentDirectory + "audiobooks/";
 
 export async function downloadAndUnzip(bookId: number) {
+    const server = await AsyncStorage.getItem('server')
     const zipPath = `${ROOT}${bookId}.zip`;
     const destPath = `${ROOT}${bookId}/`;
-    const url = `${API_URL}/download_book/${bookId}`
+    const url = `${server}/download_book/${bookId}`
     const token = await AsyncStorage.getItem('token')
     // Ensure "books" directory exists
     await FileSystem.makeDirectoryAsync(ROOT, { intermediates: true });

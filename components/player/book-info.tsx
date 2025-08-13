@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View, Image, Dimensions } from 'react-native'
 import { useAudioPlayerStore } from '../store/audio-player-store'
-import { API_URL } from '@/data/api/api'
 import { Audiobook } from '@/data/database/models';
 
 
@@ -16,7 +15,8 @@ export default function BookInfo({ currentBook }: { currentBook: Audiobook }) {
         console.error("error fetching book in book info")
         return (<View>Error loading book</View>)
     }
-    const coverUri = `${API_URL}${currentBook?.cover_art}`;
+    const server = useAudioPlayerStore(s => s.server)
+    const coverUri = `${server}${currentBook?.cover_art}`;
 
     return (
         <View style={styles.container}>
