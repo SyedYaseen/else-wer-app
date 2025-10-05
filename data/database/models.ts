@@ -5,6 +5,7 @@ export type Audiobook = {
     title: string;
     cover_art?: string | null;
     local_path?: string | null;
+    duration?: number;
     metadata?: string | null;
     downloaded: number;
     created_at?: string | null;

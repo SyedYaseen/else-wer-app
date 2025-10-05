@@ -1,53 +1,61 @@
-import { ROOT } from "@/constants/constants";
 import { fetchBooks } from "@/data/api/api";
 import { Audiobook, FileRow } from "@/data/database/models";
-import { getFilesForBook, upsertAudiobooks } from "@/data/database/audiobook-repo";
-import { Audio } from "expo-av";
+import { upsertAudiobooks } from "@/data/database/audiobook-repo";
 import { useEffect, useState } from "react";
-import { FlatList, View } from "react-native";
+import { FlatList, View, StyleSheet, Dimensions } from "react-native";
 import BookCard from './book-card';
 
+const numColumns = 2;
+const screenWidth = Dimensions.get('window').width;
+const itemMargin = 10;
+const itemWidth = (screenWidth - (numColumns + 1) * itemMargin) / numColumns;
 
 function Library() {
     const [books, setBooks] = useState<Audiobook[]>([]);
-    const [downloadingBookId, setDownloadingBookId] = useState<number | null>(null);
-    const [downloadedFiles, setDownloadedFiles] = useState<Record<number, FileRow[]>>({});
-
-    const downloadBook: (bookId: number) => void = (bookId: number) => {
-        console.log("Downloading", bookId)
-    }
 
     useEffect(() => {
         fetchBooks().then(async (data) => {
             setBooks(data.books);
             await upsertAudiobooks(data.books)
-
-            data?.books.forEach(async b => {
-                const destPath = `${ROOT}${b.id}/`;
-                const files = await getFilesForBook(b.id)
-                if (files && files.length) {
-                    setDownloadedFiles((prev) => ({ ...prev, [b.id]: files }));
-                }
-            })
         });
 
-        Audio.setAudioModeAsync({
-            playsInSilentModeIOS: true,
-            staysActiveInBackground: false,
-        });
+        // Audio.setAudioModeAsync({
+        //     playsInSilentModeIOS: true,
+        //     staysActiveInBackground: false,
+        // });
     }, []);
 
 
     return (
-        <View style={{ backgroundColor: "#fff", paddingTop: 20 }}>
+        <View style={{ backgroundColor: "#1C1C1E", paddingTop: 20 }}>
             <FlatList
                 data={books}
                 keyExtractor={(book) => book?.id?.toString()}
-                renderItem={({ item }) => <BookCard book={item} />}
-                contentContainerStyle={{ paddingBottom: 40 }}
+                renderItem={({ item }) =>
+                    <View style={styles.itemContainer}>
+                        <BookCard book={item} />
+                    </View>
+                }
+                numColumns={numColumns}
+                contentContainerStyle={styles.listContent}
+                columnWrapperStyle={styles.columnWrapper}
             />
         </View>
     )
 }
+
+const styles = StyleSheet.create({
+    listContent: {
+        paddingBottom: 40,
+        paddingHorizontal: itemMargin,
+    },
+    columnWrapper: {
+        justifyContent: 'space-between',
+        marginBottom: itemMargin,
+    },
+    itemContainer: {
+        width: itemWidth,
+    },
+});
 
 export default Library

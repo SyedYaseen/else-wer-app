@@ -8,8 +8,12 @@ import 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/components/hooks/useColorScheme';
 import { initDb } from '@/data/database/initdb';
-import { resetDb } from '@/data/database/utils';
-import { useSharedAudioPlayer } from '@/components/hooks/useSharedAudioPlayer';
+import useInitPlayer from '@/components/hooks/useInitPlayer';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import MiniPlayer from '@/components/player/mini-player';
+import { useAudioPlayerStore } from '@/components/store/audio-player-store';
+import { View, StyleSheet } from 'react-native';
+
 export {
   ErrorBoundary,
 } from 'expo-router';
@@ -48,19 +52,26 @@ function RootLayoutNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
-  useSharedAudioPlayer()
+  // const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = 84;
+  const currentBook = useAudioPlayerStore(s => s.currentBook)
+  useInitPlayer()
 
   useEffect(() => {
     (async () => {
       try {
         // await resetDb()
+        // await AsyncStorage.clear()
         await initDb();
-        // console.log("Database initialized!");
+        console.log("Database initialized!");
       } catch (err) {
         console.error("DB init error:", err);
       }
     })();
 
+  }, [])
+
+  useEffect(() => {
     const checkToken = async () => {
       const token = await AsyncStorage.getItem('token');
       if (!token && pathname !== '/login') {
@@ -83,6 +94,20 @@ function RootLayoutNav() {
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="book/[id]" />
       </Stack>
+
+      {currentBook && (
+        <View style={[styles.miniPlayerWrapper, { bottom: tabBarHeight }]}>
+          <MiniPlayer />
+        </View>
+      )}
+
     </ThemeProvider>
   );
 }
+const styles = StyleSheet.create({
+  miniPlayerWrapper: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+  },
+});

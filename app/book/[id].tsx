@@ -1,13 +1,15 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
 import { downloadAndUnzip, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
-import { deleteBookDb, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
+import { deleteBookDb, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, Button, Image, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router'
-import { FileRow } from '@/data/database/models';
+import { Audiobook, FileRow } from '@/data/database/models';
+import { useAudioPlayerStore } from '@/components/store/audio-player-store';
+
 type BookParams = {
     id: string;
     title: string;
@@ -17,25 +19,25 @@ type BookParams = {
 export default function BookDetails() {
     const { id, title, author } = useLocalSearchParams<BookParams>();
     const bookId = parseInt(id);
+    const [book, setBook] = useState<Audiobook>();
     const [isDownloading, setIsDownloading] = useState(false)
     const [isDownloaded, setIsDownloaded] = useState(false)
-    const [files, setFiles] = useState<FileRow[]>()
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<null | string>(null);
     const router = useRouter()
 
+    // Load book - Do not use global state. Use that only for player
     useEffect(() => {
-        let isMounted = true;
-
-        const fetchFiles = async () => {
-            const files = await getFilesForBook(bookId);
-            if (isMounted && files?.length) {
+        getBook(bookId).then(b => {
+            if (b?.cover_art)
+                setBook(b)
+        })
+        getFilesForBook(bookId).then(res => {
+            if (res.length > 0)
                 setIsDownloaded(true)
-            }
-        };
+        })
+    }, [bookId])
 
-        fetchFiles()
-
-        return () => { isMounted = false; }
-    }, [bookId]);
 
     const handleDownload = async () => {
         try {
@@ -44,18 +46,15 @@ export default function BookDetails() {
             setIsDownloading(true);
             const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
 
-            const { files } = await downloadAndUnzip(bookId);
+            const { localFilePaths } = await downloadAndUnzip(bookId);
 
             fileRows?.forEach(fr => {
-                fr.local_path = files.find(f => fr.file_path && f.endsWith(fr.file_path))
-                const fpath = fr.local_path?.split("/")
-                fr.file_name = fpath?.at(fpath.length - 1) ?? `book_${fr.book_id}-file_${fr.file_id}`
+                fr.local_path = localFilePaths.find(f => fr.file_name && f.endsWith(fr.file_name))
             })
 
             await upsertFiles(fileRows)
             markBookDownloaded(bookId, `${ROOT}${bookId}/`)
             setIsDownloaded(true)
-            setFiles(fileRows)
         } catch (err) {
             console.error(`Failed to download ${bookId}:`, err);
         } finally {
@@ -77,15 +76,18 @@ export default function BookDetails() {
         router.push(`/player/${id}`)
     }
 
+    const server = useAudioPlayerStore(s => s.server)
+
     return (
         <View style={styles.container}>
             <View style={styles.coverContainer}>
-                <Image
+                {server && book?.cover_art && <Image
                     source={{
-                        uri: 'https://www.thebookdesigner.com/wp-content/uploads/2023/12/The-Hobbit-Book-Cover-Minimalistic-Mountains.png?channel=Organic&medium=Google%20-%20Search'
+                        uri: `${server}${book?.cover_art}`
                     }}
                     style={styles.coverImage}
                 />
+                }
             </View>
 
             <View style={styles.header}>
@@ -97,19 +99,18 @@ export default function BookDetails() {
                     {isDownloading && <LoadingSpinner />}
                     {!isDownloaded && !isDownloading ?
                         <TouchableOpacity onPress={handleDownload}>
-                            <MaterialIcons name='download' size={40} color="#555555" />
+                            <MaterialIcons name='download' size={40} color="#CCCCCC" />
                         </TouchableOpacity> :
 
                         <TouchableOpacity onPress={handlePlay}>
-                            <MaterialIcons name='play-circle' size={40} color="#555555" />
+                            <MaterialIcons name='play-circle' size={40} color="#CCCCCC" />
                         </TouchableOpacity>
-
                     }
                     {/* <TouchableOpacity onPress={() => console.log("Completed...")}>
                         <MaterialIcons name='check-circle' size={40} color="#555555" />
                     </TouchableOpacity> */}
                     <TouchableOpacity onPress={handleDelete}>
-                        <MaterialIcons name='delete' size={40} color="#FF5522" />
+                        <MaterialIcons name='delete' size={40} color="#CCCCCC" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'flex-start',
-        backgroundColor: '#FFF',
+        backgroundColor: '#1C1C1E',
     },
     coverContainer: {
         height: 300,
@@ -154,10 +155,11 @@ const styles = StyleSheet.create({
     titleText: {
         fontSize: 24,
         fontWeight: 'bold',
+        color: '#CCCCCC',
     },
     authorText: {
         fontSize: 18,
-        color: '#666',
+        color: '#CCCCCC',
     },
     actions: {
         flexDirection: 'row',
@@ -175,6 +177,6 @@ const styles = StyleSheet.create({
     descriptionText: {
         fontSize: 16,
         lineHeight: 24,
-        color: '#444',
+        color: '#CCCCCC',
     },
 });
