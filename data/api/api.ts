@@ -29,14 +29,17 @@ export async function logout(navigation: any) {
 // Books
 export async function scanServerFiles() {
     await apiFetch("/scan_files")
+    await apiFetch("/init_books_from_file_scan_cache")
 }
 
 
 export async function fetchBooks() {
-    await scanServerFiles()
+    // await scanServerFiles()
     const res = await apiFetch("/list_books")
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-    return await res.json();
+    const books = await res.json();
+    // console.log(books)
+    return books
 }
 
 export async function fetchFileMetaFromServer(id: number) {

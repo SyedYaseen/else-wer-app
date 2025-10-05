@@ -9,6 +9,7 @@ import { View, Text, Button, Image, StyleSheet, TouchableOpacity, Pressable } fr
 import { useRouter } from 'expo-router'
 import { Audiobook, FileRow } from '@/data/database/models';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type BookParams = {
     id: string;
@@ -26,12 +27,25 @@ export default function BookDetails() {
     const [error, setError] = useState<null | string>(null);
     const router = useRouter()
 
+    const server = useAudioPlayerStore((s) => s.server);
+    const setServer = useAudioPlayerStore((s) => s.setServer);
+
+    useEffect(() => {
+        if (!server) {
+            (async () => {
+                const savedServer = await AsyncStorage.getItem("server");
+                if (savedServer) setServer(savedServer);
+            })();
+        }
+    }, [server]);
+
     // Load book - Do not use global state. Use that only for player
     useEffect(() => {
         getBook(bookId).then(b => {
-            if (b?.cover_art)
+            if (b)
                 setBook(b)
         })
+
         getFilesForBook(bookId).then(res => {
             if (res.length > 0)
                 setIsDownloaded(true)
@@ -75,8 +89,6 @@ export default function BookDetails() {
     const handlePlay = async () => {
         router.push(`/player/${id}`)
     }
-
-    const server = useAudioPlayerStore(s => s.server)
 
     return (
         <View style={styles.container}>

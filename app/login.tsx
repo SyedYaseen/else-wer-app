@@ -7,7 +7,7 @@ import { Button, Pressable, StyleSheet, TextInput, View, Text } from 'react-nati
 
 export default function Login() {
     const router = useRouter();
-    const [server, setServer] = useState('http://192.168.1.12:3000'); // TODO: replace with global store
+    const [server, setServer] = useState('http://192.168.1.3:3000'); // TODO: replace with global store
     const [username, setUsername] = useState('admin');
     const [password, setPassword] = useState('admin');
     const setServerStore = useAudioPlayerStore(s => s.setServer)
@@ -62,10 +62,10 @@ export default function Login() {
 
             <Button title="Login" onPress={handleLogin} />
         </View>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
     container: { padding: 20, flex: 1, justifyContent: 'center' },
     input: { borderWidth: 1, marginBottom: 12, padding: 10, borderRadius: 5, color: '#FFFFFF' }
-});
+})

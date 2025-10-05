@@ -1,11 +1,23 @@
 import { Audiobook } from "@/data/database/models";
 import { Link } from "expo-router";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAudioPlayerStore } from "../store/audio-player-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function BookCard({ book }: { book: Audiobook }) {
-    const server = useAudioPlayerStore(s => s.server)
+    const server = useAudioPlayerStore((s) => s.server);
+    const setServer = useAudioPlayerStore((s) => s.setServer);
+
+    useEffect(() => {
+        if (!server) {
+            (async () => {
+                const savedServer = await AsyncStorage.getItem("server");
+                if (savedServer) setServer(savedServer);
+            })();
+        }
+    }, [server]);
+
     return (
         <Link
             href={{
