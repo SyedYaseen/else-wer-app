@@ -95,11 +95,11 @@ function RootLayoutNav() {
         <Stack.Screen name="book/[id]" />
       </Stack>
 
-      {currentBook && (
+      {/* {currentBook && (
         <View style={[styles.miniPlayerWrapper, { bottom: tabBarHeight }]}>
           <MiniPlayer />
         </View>
-      )}
+      )} */}
 
     </ThemeProvider>
   );

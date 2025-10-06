@@ -39,6 +39,7 @@ export function useAudioController() {
     const onPlay = async () => {
         try {
             if (queue && queue.length > 0) {
+                console.log(queue)
                 if (player.playing) {
                     player.pause()
 

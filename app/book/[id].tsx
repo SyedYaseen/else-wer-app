@@ -60,16 +60,8 @@ export default function BookDetails() {
             setIsDownloading(true);
             const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
 
-            const localFilePaths: string[] = [];
             for (const f of fileRows) {
-                const localPath = await downloadFileInChunks(f.book_id, f.file_id);
-                localFilePaths.push(localPath);
-            }
-
-            for (const fr of fileRows) {
-                fr.local_path = localFilePaths.find(
-                    (p) => fr.file_name && p.endsWith(fr.file_name)
-                );
+                f.local_path = await downloadFileInChunks(f.book_id, f.file_id);
             }
 
             await upsertFiles(fileRows);
@@ -84,7 +76,7 @@ export default function BookDetails() {
 
     const handleDelete = async () => {
         try {
-            // await deleteBookDb(bookId)
+            await deleteBookDb(bookId)
             await removeDownloadedBook(bookId)
             setIsDownloaded(false)
         } catch (err) {
