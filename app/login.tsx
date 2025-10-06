@@ -13,8 +13,6 @@ export default function Login() {
     const setServerStore = useAudioPlayerStore(s => s.setServer)
     const handleLogin = async () => {
         try {
-            console.log(`${server}/api/login`, username, password)
-
             const data = await login(server, username, password)
 
             await AsyncStorage.setItem('token', data.token);

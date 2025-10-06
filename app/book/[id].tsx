@@ -1,6 +1,6 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
-import { downloadAndUnzip, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
+import { downloadAndUnzip, downloadFileInChunks, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
 import { deleteBookDb, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -60,15 +60,21 @@ export default function BookDetails() {
             setIsDownloading(true);
             const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
 
-            const { localFilePaths } = await downloadAndUnzip(bookId);
+            const localFilePaths: string[] = [];
+            for (const f of fileRows) {
+                const localPath = await downloadFileInChunks(f.book_id, f.file_id);
+                localFilePaths.push(localPath);
+            }
 
-            fileRows?.forEach(fr => {
-                fr.local_path = localFilePaths.find(f => fr.file_name && f.endsWith(fr.file_name))
-            })
+            for (const fr of fileRows) {
+                fr.local_path = localFilePaths.find(
+                    (p) => fr.file_name && p.endsWith(fr.file_name)
+                );
+            }
 
-            await upsertFiles(fileRows)
-            markBookDownloaded(bookId, `${ROOT}${bookId}/`)
-            setIsDownloaded(true)
+            await upsertFiles(fileRows);
+            markBookDownloaded(bookId, `${ROOT}${bookId}/`);
+            setIsDownloaded(true);
         } catch (err) {
             console.error(`Failed to download ${bookId}:`, err);
         } finally {
@@ -78,7 +84,7 @@ export default function BookDetails() {
 
     const handleDelete = async () => {
         try {
-            await deleteBookDb(bookId)
+            // await deleteBookDb(bookId)
             await removeDownloadedBook(bookId)
             setIsDownloaded(false)
         } catch (err) {

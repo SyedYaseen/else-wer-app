@@ -50,6 +50,79 @@ export async function fetchFileMetaFromServer(id: number) {
 
 const ROOT = FileSystem.documentDirectory + "audiobooks/";
 
+
+const CHUNK_SIZE = 1024 * 1024 * 2; // 2MB
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    let binary = "";
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    return btoa(binary);
+}
+
+export async function downloadFileInChunks(bookId: number, fileId: number) {
+    const baseUrl = await AsyncStorage.getItem('server')
+    const token = await AsyncStorage.getItem('token')
+    let fileUrl = `${baseUrl}/download_chunk/${fileId}`;
+    const destPath = `${ROOT}${bookId}`;
+    // 1️⃣ Get file size first
+    const headResp = await fetch(fileUrl, {
+        method: "HEAD",
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    const totalSize = Number(headResp.headers.get("content-length")) || 0;
+
+    if (!totalSize) throw new Error("Unable to get file size");
+
+    console.log("Total size:", totalSize);
+
+    // 2️⃣ Clear or create the destination file
+    await FileSystem.writeAsStringAsync(destPath, "", {
+        encoding: FileSystem.EncodingType.UTF8,
+    }).catch(err => console.error("Failed to create folder", destPath));
+
+    fileUrl += `?size=${CHUNK_SIZE}`
+    // // 3️⃣ Sequentially fetch chunks
+
+    for (let start = 0; start < totalSize; start += CHUNK_SIZE) {
+        const end = Math.min(start + CHUNK_SIZE - 1, totalSize - 1)
+        console.log("Downloading", start)
+
+        // fileUrl += start
+        const res = await fetch(fileUrl, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Range: `bytes=${start}-${end}`,
+            },
+        });
+
+        if (!res.ok) {
+            throw new Error(`Chunk download failed: ${res.status}`);
+        }
+
+        // // Convert response to ArrayBuffer and then Base64
+        const buffer = await res.arrayBuffer();
+        const base64Chunk = arrayBufferToBase64(buffer);
+
+        // // Append to file
+        await FileSystem.writeAsStringAsync(destPath, base64Chunk, {
+            encoding: FileSystem.EncodingType.Base64,
+            // @ts-expect-error: append supported in runtime
+            append: true,
+        });
+
+        // const percent = Math.min(((end + 1) / totalSize) * 100, 100);
+        // onProgress?.(percent);
+        console.log("Saved: ", start)
+    }
+
+    return destPath;
+}
+
 export async function downloadAndUnzip(bookId: number) {
     const server = await AsyncStorage.getItem('server')
     const zipPath = `${ROOT}${bookId}.zip`;
