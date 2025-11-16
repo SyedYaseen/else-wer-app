@@ -51,8 +51,8 @@ export async function fetchFileMetaFromServer(id: number) {
 const ROOT = FileSystem.documentDirectory + "audiobooks/";
 
 
-const CHUNK_SIZE = 1024 * 1024 * 2; // 2MB
-
+const CHUNK_SIZE = 1024 * 1024 * 3 // 3MB
+const CONCURRENCY_LIMIT = 16
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
     let binary = "";
     const bytes = new Uint8Array(buffer);
@@ -68,17 +68,20 @@ export async function downloadFileInChunks(bookId: number, fileId: number) {
     const baseUrl = await AsyncStorage.getItem('server')
     const token = await AsyncStorage.getItem('token')
     let fileUrl = `${baseUrl}/download_chunk/${fileId}`;
+
     const destPath = `${ROOT}${bookId}`;
+
     // 1️⃣ Get file size first
     const headResp = await fetch(fileUrl, {
         method: "HEAD",
         headers: { Authorization: `Bearer ${token}` },
     });
+
     const totalSize = Number(headResp.headers.get("content-length")) || 0;
 
     if (!totalSize) throw new Error("Unable to get file size");
 
-    console.log("Total size:", totalSize);
+    console.log("Total size from HEAD:", totalSize);
 
     // 2️⃣ Clear or create the destination file
     await FileSystem.writeAsStringAsync(destPath, "", {
@@ -86,38 +89,68 @@ export async function downloadFileInChunks(bookId: number, fileId: number) {
     }).catch(err => console.error("Failed to create folder", destPath));
 
     fileUrl += `?size=${CHUNK_SIZE}`
-    // // 3️⃣ Sequentially fetch chunks
 
+
+    // create the download items
+    let idx = 0;
+    let chunks: { idx: number, start: number, end: number, retry: number }[] = []
     for (let start = 0; start < totalSize; start += CHUNK_SIZE) {
         const end = Math.min(start + CHUNK_SIZE - 1, totalSize - 1)
-        console.log("Downloading", start)
+        chunks.push({ idx, start, end, retry: 0 })
+    }
 
-        // fileUrl += start
-        const res = await fetch(fileUrl, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Range: `bytes=${start}-${end}`,
-            },
-        });
+    const maxRetries = 3
 
-        if (!res.ok) {
-            throw new Error(`Chunk download failed: ${res.status}`);
+    const results: (string | null)[] = []
+
+    async function download(c: { idx: number, start: number, end: number, retry: number }) {
+        let downloadUrl = `${fileUrl}&start=${c.start}&end=${c.end}`
+
+        try {
+            const res = await fetch(downloadUrl, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            if (!res.ok) throw new Error(`Bad status ${res.status}`);
+
+            const buffer = await res.arrayBuffer();
+            const base64Chunk = arrayBufferToBase64(buffer);
+
+            results[c.idx] = base64Chunk;
+        } catch (err) {
+            if (c.retry < maxRetries) {
+                console.warn("Retying chunk", fileUrl, c.idx, c.start, c.end, err)
+                c.retry++
+                return download(c)
+            } else {
+                throw new Error(`Failed to download ${fileUrl} idx: ${c.idx}`)
+            }
         }
 
-        // // Convert response to ArrayBuffer and then Base64
-        const buffer = await res.arrayBuffer();
-        const base64Chunk = arrayBufferToBase64(buffer);
+    }
 
-        // // Append to file
-        await FileSystem.writeAsStringAsync(destPath, base64Chunk, {
+    let pointer = 0;
+    async function runWorker(): Promise<void> {
+        while (pointer < chunks.length) {
+            const chunk = chunks[pointer++]
+            await download(chunk)
+        }
+    }
+
+    let workers = []
+    for (let i = 0; i < CONCURRENCY_LIMIT; i++) {
+        workers.push(runWorker())
+    }
+
+    await Promise.all(workers)
+
+    for (let i = 0; i < results.length; i++) {
+        let chunk = results[i]
+        if (!chunk) throw new Error(`Missing chunk ${i}`);
+        await FileSystem.writeAsStringAsync(destPath, chunk, {
             encoding: FileSystem.EncodingType.Base64,
             // @ts-expect-error: append supported in runtime
             append: true,
-        });
-
-        // const percent = Math.min(((end + 1) / totalSize) * 100, 100);
-        // onProgress?.(percent);
-        console.log("Saved: ", start)
+        })
     }
 
     return destPath;

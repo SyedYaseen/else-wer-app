@@ -21,8 +21,9 @@ export async function getBookProgress(
     const srvrCompleteCount = completeCount(progressServer)
 
     if (lclCompleteCount === files.length || srvrCompleteCount === files.length) {
+        // TODO: Fix logic incase of single file books. E.g Children of Ruin
         console.log("Book was marked complete. Starting from beginnig")
-        return { q, pos }
+        // return { q, pos }
     }
 
     // If only one of the sources have progress for file

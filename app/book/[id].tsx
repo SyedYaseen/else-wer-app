@@ -10,6 +10,8 @@ import { useRouter } from 'expo-router'
 import { Audiobook, FileRow } from '@/data/database/models';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDownloadStore } from '@/components/store/download-strore';
+import Downloads from '@/components/downloads/downloads';
 
 type BookParams = {
     id: string;
@@ -26,6 +28,9 @@ export default function BookDetails() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<null | string>(null);
     const router = useRouter()
+
+    const items = useDownloadStore((s) => s.items)
+    const startDownload = useDownloadStore((s) => s.startDownload)
 
     const server = useAudioPlayerStore((s) => s.server);
     const setServer = useAudioPlayerStore((s) => s.setServer);
@@ -52,20 +57,29 @@ export default function BookDetails() {
         })
     }, [bookId])
 
-
     const handleDownload = async () => {
         try {
-            await handleDelete()
+            try {
+                await handleDelete()
+            } catch (Err) {
+                console.warn("Failed to delete book")
+            }
 
             setIsDownloading(true);
             const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
 
+            const local = await startDownload({ bookId: fileRows[0].book_id, fileId: fileRows[0].file_id })
+            console.log('download finished at dest === ', local)
+
+            // fileRows[0].local_path = await downloadFileInChunks(fileRows[0].book_id, fileRows[0].file_id);
             for (const f of fileRows) {
-                f.local_path = await downloadFileInChunks(f.book_id, f.file_id);
+                f.local_path = await startDownload({ bookId: f.book_id, fileId: f.file_id })
+                console.log("local path from book details", f.local_path)
+                //  = await downloadFileInChunks(f.book_id, f.file_id);
             }
 
             await upsertFiles(fileRows);
-            markBookDownloaded(bookId, `${ROOT}${bookId}/`);
+            // markBookDownloaded(bookId, `${ROOT}${bookId}/`);
             setIsDownloaded(true);
         } catch (err) {
             console.error(`Failed to download ${bookId}:`, err);
@@ -131,6 +145,7 @@ export default function BookDetails() {
                     The Hobbit is set in Middle-earth and follows home-loving Bilbo Baggins, the titular hobbit who joins the wizard Gandalf and the thirteen dwarves of Thorin's Company on a quest to reclaim the dwarves' home and treasure from the dragon Smaug.
                 </Text>
             </View>
+            <Downloads />
         </View>
     );
 };

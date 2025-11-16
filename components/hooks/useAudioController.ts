@@ -2,6 +2,17 @@ import { useState } from 'react';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import { saveProgress } from '@/data/api/api';
 
+
+import * as FileSystem from "expo-file-system";
+
+async function debugFile(path: string) {
+    const info = await FileSystem.getInfoAsync(path, { size: true });
+    console.log("Exists:", info.exists);
+    console.log("Is directory:", info.isDirectory);
+    // console.log("Size:", info.size);
+    console.log("Uri:", info.uri);
+}
+
 export function useAudioController() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<null | string>(null)
@@ -38,8 +49,11 @@ export function useAudioController() {
 
     const onPlay = async () => {
         try {
+            console.log("Qlen", queue)
             if (queue && queue.length > 0) {
-                console.log(queue)
+                console.log(queue[0].file_path)
+                debugFile(queue[0].file_path as string)
+
                 if (player.playing) {
                     player.pause()
 
@@ -48,8 +62,10 @@ export function useAudioController() {
                         player.currentTime * 1000,
                         false)
                 } else {
-                    if (player.isLoaded)
+                    if (player.isLoaded) {
+                        console.log("hits here?")
                         player.play()
+                    }
                 }
             }
         } catch (e) {

@@ -60,6 +60,7 @@ export default function Player() {
                 setError(null);
 
                 const bookData = await getBook(bookId)
+                console.log("Bookdata", bookData)
                 if (!bookData) {
                     setError(`BookId: ${bookId} not found on db`)
                     console.error(`BookId: ${bookId} not found on db`)
@@ -77,12 +78,13 @@ export default function Player() {
                 setFiles(files)
 
                 console.log("Building queue for", bookData.title)
-                console.log(" ")
                 const { q, pos } = await getBookProgress(bookId, files)
 
                 setQueue(q)
                 const next = q[0];
+                console.log("next in q: ", next)
                 if (next?.local_path) {
+                    console.log("This set?")
                     player?.replace(next.local_path);
                     player.seekTo(pos / 1000)
                     player?.play()
