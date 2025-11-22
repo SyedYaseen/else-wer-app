@@ -51,7 +51,7 @@ export function useAudioController() {
         try {
             console.log("Qlen", queue)
             if (queue && queue.length > 0) {
-                console.log(queue[0].file_path)
+                console.log(queue[0].local_path)
                 debugFile(queue[0].file_path as string)
 
                 if (player.playing) {

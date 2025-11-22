@@ -7,12 +7,14 @@ function Downloads() {
 
     return (
         <View style={styles.container}>
-            {Object.values(items).map(item => <>
+
+            {Object.values(items).map(item => 
+            <View key={item.bookId + "_" + item.fileId}>
                 <Text>BookId: {item.bookId}</Text>
                 <Text>FileId: {item.fileId}</Text>
                 <Text>Progress: {item.progress * 100}</Text>
                 <Text>Status: {item.status}</Text>
-            </>)}
+            </View>)}
         </View >
     )
 }
