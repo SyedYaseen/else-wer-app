@@ -1,7 +1,7 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { ROOT } from '@/constants/constants';
 import { downloadAndUnzip, downloadFileInChunks, fetchFileMetaFromServer, listFilesRecursively, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
-import { deleteBookDb, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
+import { deleteBookDb, getAllFiles, getBook, getFilesForBook, markBookDownloaded, updateFilePath, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -12,6 +12,7 @@ import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDownloadStore } from '@/components/store/download-strore';
 import Downloads from '@/components/downloads/downloads';
+import { Paths } from 'expo-file-system';
 
 type BookParams = {
   id: string;
@@ -34,6 +35,7 @@ export default function BookDetails() {
 
   const server = useAudioPlayerStore((s) => s.server);
   const setServer = useAudioPlayerStore((s) => s.setServer);
+  const player = useAudioPlayerStore(s => s.player)
 
   useEffect(() => {
     if (!server) {
@@ -58,30 +60,53 @@ export default function BookDetails() {
   }, [bookId])
 
   const handleDownload = async () => {
+    //try {
     try {
-      try {
-        await handleDelete()
-      } catch (Err) {
-        console.warn("Failed to delete book")
-      }
-
-      setIsDownloading(true);
-      const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
-
-      for (const f of fileRows) {
-        f.local_path = await startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name })
-        console.log("local path from book details", f.local_path)
-        //f.local_path = await downloadFileInChunks(f.book_id, f.file_id);
-      }
-
-      await upsertFiles(fileRows);
-      markBookDownloaded(bookId, `${ROOT}${bookId}/`);
-      setIsDownloaded(true);
-    } catch (err) {
-      console.error(`Failed to download ${bookId}:`, err);
-    } finally {
-      setIsDownloading(false);
+      //  await handleDelete()
+    } catch (Err) {
+      console.warn("Failed to delete book")
     }
+
+    setIsDownloading(true);
+    const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
+
+    for (const f of fileRows) {
+      f.local_path = await startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name })
+      //const localPath = await startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name })
+      //await updateFilePath(f.book_id, f.file_id, localPath)
+      console.log("local path from book details", f)
+      //f.local_path = await downloadFileInChunks(f.book_id, f.file_id);
+    }
+
+    /*
+    console.log("Its coming here?", fileRows)
+    // Test
+    console.log("Is player null?", player)
+    console.log("Test fiel to play", fileRows[0].local_path as string)
+    player?.replace(fileRows[0].local_path as string)
+    player?.play()
+    */
+
+    await upsertFiles(fileRows);
+
+    const fi = await getAllFiles()
+    console.log("All Files", fi)
+    getFilesForBook(bookId).then(res => {
+      console.log("File after update", res)
+    })
+
+    console.log("BookDet Dir", Paths.join(Paths.document, "audiobooks", bookId.toString()).toString())
+    try {
+      markBookDownloaded(bookId, Paths.join(Paths.document, "audiobooks", bookId.toString()).toString());
+    } catch (err) {
+      console.error(err)
+    }
+    setIsDownloaded(true);
+    //} catch (err) {
+    //console.error(`Failed to download ${bookId}:`, err);
+    //} finally {
+    setIsDownloading(false);
+    //}
   };
 
   const handleDelete = async () => {

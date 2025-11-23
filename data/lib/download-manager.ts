@@ -3,6 +3,7 @@ import * as FileSystem from 'expo-file-system'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { DownloadItem, DownloadState, useDownloadStore } from '@/components/store/download-strore'
 import { Buffer } from "buffer";
+import { FileHandle, File, Paths } from 'expo-file-system';
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = "";
@@ -144,15 +145,11 @@ export class DownloadManager {
     const totalSize = Number(headResp.headers.get('content-length') || '0')
     if (!totalSize) throw new Error('Unable to determine file size')
 
-    // create directory + final file path
-    const ROOT = `${FileSystem.documentDirectory}audiobooks/`
-    const destFolder = `${ROOT}${bookId}`
-    await FileSystem.makeDirectoryAsync(destFolder, { intermediates: true }).catch(() => { })
-    const finalFileName = `${fileId}_${fileName}` // TODO: Fix filename input
-    const destPath = `${destFolder}/${finalFileName}`
+    const newFile = new FileSystem.File(Paths.document, "audiobooks", bookId.toString(), `${fileId}_${fileName}`)
+    newFile.create({ intermediates: true, overwrite: true })
 
     // clear any existing file
-    await FileSystem.writeAsStringAsync(destPath, '', { encoding: FileSystem.EncodingType.UTF8 }).catch(() => { })
+    //await FileSystem.writeAsStringAsync(destPath, '', { encoding: FileSystem.EncodingType.UTF8 }).catch(() => { })
 
     // prepare chunk map
 
@@ -163,7 +160,7 @@ export class DownloadManager {
       chunks.push({ index: idx, start, end, retries: 0 })
     }
 
-    const results: (string | null)[] = Array(chunks.length).fill(null)
+    const results: (Uint8Array | null)[] = Array(chunks.length).fill(null)
 
     // downloads a single chunk with retries
     const downloadChunk = async (c: Chunk) => {
@@ -172,11 +169,10 @@ export class DownloadManager {
       try {
         const res = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } })
         if (!res.ok) throw new Error(`bad status ${res.status}`)
-        const buffer = await res.arrayBuffer()
-        //        const base64Chunk = arrayBufferToBase64(buffer)
-        const base64Chunk = Buffer.from(buffer).toString("base64");
-        // const binStr = arrayBufferToBinaryStr(base64Chunk)
-        results[c.index] = base64Chunk
+        const arrayBuffer = await res.arrayBuffer()
+        const bytes = new Uint8Array(arrayBuffer)
+
+        results[c.index] = bytes
       } catch (err) {
         if (c.retries < this.MAX_RETRIES) {
           c.retries++
@@ -204,7 +200,7 @@ export class DownloadManager {
           this.lastPersistAt = now
           const key = `${bookId}_${fileId}`
           try {
-            await AsyncStorage.setItem(`download:${key}:progress`, String(progress))
+            //await AsyncStorage.setItem(`download:${key}:progress`, String(progress))
           } catch (e) {
             // ignore persistence failures
           }
@@ -218,23 +214,26 @@ export class DownloadManager {
     for (let i = 0; i < concurrency; i++) workers.push(worker())
     await Promise.all(workers)
 
-    // all chunks downloaded (results array filled with base64 strings)
-    // write them in order to file (appending base64)
-    for (let i = 0; i < results.length; i++) {
-      const b64 = results[i]
-      if (!b64) throw new Error(`Missing chunk ${i}`)
-      await FileSystem.writeAsStringAsync(destPath, b64, {
-        // @ts-ignore append works at runtime
-        append: true,
-      })
+    try {
+      const fHandle = newFile.open()
+      for (let i = 0; i < results.length; i++) {
+        fHandle.offset = i * this.CHUNK_SIZE
+        if (results[i] !== null) {
+          // @ts-ignore Checking for null previously
+          fHandle.writeBytes(results[i])
+        }
+      }
+      fHandle.close()
+    } catch (err) {
+      console.error("Failed to saved downloaded data to device")
     }
 
     // final verification: check size
-    const info = await FileSystem.getInfoAsync(destPath, { size: true })
-    console.log("file info -=-=: ", info)
-    if (!info.exists || info.size === 0) throw new Error('Final file missing or empty')
+    //const info = await FileSystem.getInfoAsync(destPath, { size: true })
+    //console.log("file info -=-=: ", info)
+    //if (!info.exists || info.size === 0) throw new Error('Final file missing or empty')
 
     // return local path (file://)
-    return info.uri
+    return Paths.join(Paths.document, "audiobooks", bookId.toString(), `${fileId}_${fileName}`).toString()
   }
 }

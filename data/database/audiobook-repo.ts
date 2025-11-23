@@ -23,39 +23,47 @@ export async function upsertAudiobook(book: Audiobook) {
 
 export async function upsertAudiobooks(books: Audiobook[]) {
   let db = await getDb()
-
-  await db.withTransactionAsync(async () => {
-    for (const b of books) {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO audiobooks
+  try {
+    await db.withTransactionAsync(async () => {
+      for (const b of books) {
+        try {
+          await db.runAsync(
+            `INSERT OR REPLACE INTO audiobooks
           (id, author, series, title, cover_art, local_path, metadata, downloaded)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          b.id,
-          b.author,
-          b.series ?? null,
-          b.title,
-          b.cover_art ?? null,
-          b.local_path ?? null,
-          b.metadata ?? null,
-          b.downloaded ?? 0,
-        ]
-      );
-    }
-  });
+            [
+              b.id,
+              b.author,
+              b.series ?? null,
+              b.title,
+              b.cover_art ?? null,
+              b.local_path ?? null,
+              b.metadata ?? null,
+              b.downloaded ?? 0,
+            ]
+          );
+        } catch (err) {
+          console.error("Failed to add ", b.series, "to audiobooks", err, "\n", b)
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Failed to upsert audiobooks', err)
+  }
+
 }
-
-
+import * as SQLite from "expo-sqlite"
 export async function upsertFiles(files: FileRow[]) {
-  const db = await getDb();
+  //  let db = await getDb();
+  let db = await SQLite.openDatabaseAsync("audiobooks_app.db");
+
+  console.log("This works 1", "with this db value", db)
   await db.withTransactionAsync(async () => {
+    console.log("This works 2")
+
     for (const f of files) {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO files
-          (id, book_id, file_id, file_name, local_path, duration, channels, sample_rate, bitrate)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          f.id,
+      try {
+        console.log("Attempt insert", f.id,
           f.book_id,
           f.file_id,
           f.file_name,
@@ -63,20 +71,52 @@ export async function upsertFiles(files: FileRow[]) {
           f.duration ?? null,
           f.channels ?? null,
           f.sample_rate ?? null,
-          f.bitrate ?? null,
-        ]
-      );
+          f.bitrate ?? null
+        )
+        console.log("db instance", db)
+        await db.runAsync(
+          `INSERT OR REPLACE INTO files
+          (id, book_id, file_id, file_name, local_path, duration, channels, sample_rate, bitrate)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            f.id,
+            f.book_id,
+            f.file_id,
+            f.file_name,
+            f.local_path ?? null,
+            f.duration ?? null,
+            f.channels ?? null,
+            f.sample_rate ?? null,
+            f.bitrate ?? null
+          ]
+        );
+      } catch (err) {
+        console.error("Filed to upsert files", err)
+        throw err
+      }
     }
   });
 }
 
+export async function updateFilePath(bookId: number, fileId: number, localPath: string) {
+  const db = await getDb()
+  try {
+    await db.runAsync(
+      `UPDATE files SET local_path = ? WHERE file_id = ? AND book_id = ?`,
+      [localPath, fileId, bookId]
+    )
+  }
+  catch (err) {
+    console.error("Failed to updateFilePath", err)
+  }
+}
 
 export async function markBookDownloaded(bookId: number, localPath: string) {
-  const db = await getDb();
+  const db = await getDb()
   await db.runAsync(
     `UPDATE audiobooks SET downloaded = 1, local_path = ? WHERE id = ?`,
     [localPath, bookId]
-  );
+  )
 }
 
 export async function getAllBooks(): Promise<Audiobook[]> {
@@ -105,6 +145,14 @@ export async function getFilesForBook(bookId: number): Promise<FileRow[]> {
     [bookId]
   );
 }
+
+export async function getAllFiles(): Promise<FileRow[]> {
+  const db = await getDb();
+  return db.getAllAsync<FileRow>(
+    `SELECT * FROM files ORDER BY file_name ASC`
+  );
+}
+
 
 export async function getFile(fileId: number): Promise<FileRow | null> {
   const db = await getDb();

@@ -203,10 +203,11 @@ export async function listFilesRecursively(path: string): Promise<string[]> {
 }
 
 export async function removeLocalBook(bookId: number) {
-  const destPath = `${ROOT}${bookId}/`;
+  const destDir = FileSystem.Paths.join(FileSystem.Paths.document, "audiobooks", bookId.toString());
+  console.log("Dir to delete", destDir)
   try {
-    // await FileSystem.deleteAsync(ROOT, { idempotent: false })
-    await FileSystem.deleteAsync(destPath, { idempotent: false })
+    const dir = new FileSystem.Directory(destDir)
+    dir.delete()
   } catch (e) {
     console.error(e)
   }

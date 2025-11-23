@@ -2,10 +2,20 @@ import * as SQLite from "expo-sqlite";
 
 let db: SQLite.SQLiteDatabase | null = null;
 
-export async function initDb() {
-  if (db !== null) return db;
+export async function getDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!db || !db.nativeDatabase) {
+    console.log("Init database client")
+    db = await SQLite.openDatabaseAsync("audiobooks_app.db", {}, SQLite.defaultDatabaseDirectory);
+    console.log("Default db dir", SQLite.defaultDatabaseDirectory)
+  }
+  console.log("Db client already exists", db)
 
-  db = await SQLite.openDatabaseAsync("audiobooks_app.db");
+  return db
+}
+
+export async function initDb() {
+  const db = await getDb()
+
   await db.execAsync("PRAGMA journal_mode = WAL;");
 
   await db.execAsync(`
@@ -50,11 +60,7 @@ export async function initDb() {
   return db
 }
 
-export async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!db) return await initDb()
-  return db
-}
-
 export function setDbNull() {
+  if (db) db.closeAsync()
   db = null
 }
