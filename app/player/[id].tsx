@@ -34,21 +34,14 @@ export default function Player() {
     5. Starts playing
     */
     const savePreviousBookProgress = async () => {
-      // console.log("Book switched from: ", currentBook && currentBook.title)
-      // console.log("Saving previous progress", currentBook.title, formatTime(player?.currentTime), "\n")
-      // console.log(queue && queue[0].id, queue[0].file_name)
-      // console.log(" ")
       if (queue && queue.length > 0) {
-        /*
-                await saveProgress(
-                    currentBook?.id as number,
-                    queue[0].id as number,
-                    player?.currentTime * 1000,
-                    player.currentTime > player.duration - 3
-                )
-        */
+        await saveProgress(
+          currentBook?.id as number,
+          queue[0].id as number,
+          player?.currentTime * 1000,
+          player.currentTime > player.duration - 3
+        )
       }
-
     }
 
     const loadBook = async () => {
@@ -63,7 +56,9 @@ export default function Player() {
         setError(null);
 
         const bookData = await getBook(bookId)
-        console.log("Bookdata", bookData)
+
+        console.log("*** Book", bookData)
+
         if (!bookData) {
           setError(`BookId: ${bookId} not found on db`)
           console.error(`BookId: ${bookId} not found on db`)
@@ -72,7 +67,11 @@ export default function Player() {
 
         const files = await getFilesForBook(bookId)
 
-        console.log("Files to play", files)
+        console.log("*** files", files)
+
+        // TODO: When files added later when folder already has files, queue doesnt refresh without app restart
+        // TODO: Any download after first download create a weird queue issue on player,where the num of files is one more than than actual. Also fails to play
+
         if (!files || files.length === 0) {
           setError(`Missing files for ${bookData?.title}`)
           console.error("Files not in localdb or files not downloaded")
@@ -84,12 +83,14 @@ export default function Player() {
 
         console.log("Building queue for", bookData.title)
         const { q, pos } = await getBookProgress(bookId, files)
+        console.log("*** Queue", q)
 
         setQueue(q)
         const next = q[0];
+
         console.log("next in q: ", next)
+
         if (next?.local_path) {
-          console.log("This set?")
           player?.replace(next.local_path);
           player.seekTo(pos / 1000)
           player?.play()
@@ -107,8 +108,7 @@ export default function Player() {
     }
 
     if (!currentBook || currentBook.id !== bookId) {
-      console.log("Load book: ", bookId)
-      console.log(" ")
+      console.log("*** Loading new book: ", bookId)
       loadBook()
     }
   }, [bookId])

@@ -1,8 +1,8 @@
 import { fetchBooks, scanServerFiles } from "@/data/api/api";
-import { Audiobook, FileRow } from "@/data/database/models";
-import { getAllBooks, upsertAudiobooks } from "@/data/database/audiobook-repo";
+import { Audiobook } from "@/data/database/models";
+import { upsertAudiobooks } from "@/data/database/audiobook-repo";
 import { useEffect, useState } from "react";
-import { FlatList, View, StyleSheet, Dimensions, Button, TouchableOpacity } from "react-native";
+import { FlatList, View, StyleSheet, Dimensions } from "react-native";
 import BookCard from './book-card';
 
 const numColumns = 2;
@@ -30,8 +30,6 @@ function Library() {
       scanBooks()
     }
   }, [])
-
-  getAllBooks().then(res => console.log("all books", res))
 
   return (
     <View style={{ backgroundColor: "#1C1C1E", paddingTop: 20 }}>

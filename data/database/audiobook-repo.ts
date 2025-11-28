@@ -23,14 +23,15 @@ export async function upsertAudiobook(book: Audiobook) {
 
 export async function upsertAudiobooks(books: Audiobook[]) {
   let db = await getDb()
+
   try {
     await db.withTransactionAsync(async () => {
       for (const b of books) {
         try {
           await db.runAsync(
             `INSERT OR REPLACE INTO audiobooks
-          (id, author, series, title, cover_art, local_path, metadata, downloaded)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, author, series, title, cover_art, local_path, book_size, metadata, downloaded)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               b.id,
               b.author,
@@ -38,6 +39,7 @@ export async function upsertAudiobooks(books: Audiobook[]) {
               b.title,
               b.cover_art ?? null,
               b.local_path ?? null,
+              b.book_size ?? 0,
               b.metadata ?? null,
               b.downloaded ?? 0,
             ]
@@ -52,44 +54,29 @@ export async function upsertAudiobooks(books: Audiobook[]) {
   }
 
 }
-import * as SQLite from "expo-sqlite"
 export async function upsertFiles(files: FileRow[]) {
-  //  let db = await getDb();
-  let db = await SQLite.openDatabaseAsync("audiobooks_app.db");
+  let db = await getDb();
 
-  console.log("This works 1", "with this db value", db)
   await db.withTransactionAsync(async () => {
-    console.log("This works 2")
-
     for (const f of files) {
       try {
-        console.log("Attempt insert", f.id,
-          f.book_id,
-          f.file_id,
-          f.file_name,
-          f.local_path ?? null,
-          f.duration ?? null,
-          f.channels ?? null,
-          f.sample_rate ?? null,
-          f.bitrate ?? null
-        )
-        console.log("db instance", db)
         await db.runAsync(
           `INSERT OR REPLACE INTO files
-          (id, book_id, file_id, file_name, local_path, duration, channels, sample_rate, bitrate)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, book_id, file_id, file_name, file_size, local_path, duration, channels, sample_rate, bitrate)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             f.id,
             f.book_id,
             f.file_id,
             f.file_name,
+            f.file_size,
             f.local_path ?? null,
             f.duration ?? null,
             f.channels ?? null,
             f.sample_rate ?? null,
             f.bitrate ?? null
           ]
-        );
+        )
       } catch (err) {
         console.error("Filed to upsert files", err)
         throw err

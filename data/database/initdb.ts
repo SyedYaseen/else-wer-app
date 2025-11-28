@@ -3,13 +3,9 @@ import * as SQLite from "expo-sqlite";
 let db: SQLite.SQLiteDatabase | null = null;
 
 export async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!db || !db.nativeDatabase) {
-    console.log("Init database client")
-    db = await SQLite.openDatabaseAsync("audiobooks_app.db", {}, SQLite.defaultDatabaseDirectory);
-    console.log("Default db dir", SQLite.defaultDatabaseDirectory)
+  if (!db) {
+    db = await SQLite.openDatabaseAsync("audiobooks_app.db", { useNewConnection: true }, SQLite.defaultDatabaseDirectory);
   }
-  console.log("Db client already exists", db)
-
   return db
 }
 
@@ -25,6 +21,7 @@ export async function initDb() {
       series TEXT,
       title TEXT NOT NULL,
       cover_art TEXT,
+      book_size INTEGER DEFAULT 0,
       local_path TEXT,
       metadata TEXT,
       downloaded INTEGER DEFAULT 0,
@@ -36,6 +33,7 @@ export async function initDb() {
       book_id INTEGER NOT NULL,
       file_id INTEGER NOT NULL,
       file_name TEXT NOT NULL,
+      file_size INTEGER DEFAULT 0,
       local_path TEXT,
       duration INTEGER,
       channels INTEGER,

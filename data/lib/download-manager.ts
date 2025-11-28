@@ -1,29 +1,9 @@
 
 import * as FileSystem from 'expo-file-system'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { DownloadItem, DownloadState, useDownloadStore } from '@/components/store/download-strore'
-import { Buffer } from "buffer";
-import { FileHandle, File, Paths } from 'expo-file-system';
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode.apply(null, Array.from(chunk));
-  }
-  return btoa(binary);
-}
-
-function arrayBufferToBinaryStr(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return binary;
-}
+import { DownloadItem, useDownloadStore } from '@/components/store/download-strore'
+import { Paths } from 'expo-file-system';
+import { getBook } from '../database/audiobook-repo';
 
 export class DownloadManager {
   private running = false
@@ -31,8 +11,8 @@ export class DownloadManager {
   private queue: { bookId: number; fileId: number }[] = []
 
   // config
-  private CHUNK_SIZE = 1024 * 256 // 256KB
-  private CONCURRENCY = 3
+  private CHUNK_SIZE = 1024 * 1024 * 6 // 6mb
+  private CONCURRENCY = 4
   private MAX_RETRIES = 3
   private PROGRESS_PERSIST_MS = 3000 // throttle persisting to AsyncStorage
 
@@ -143,13 +123,11 @@ export class DownloadManager {
     // HEAD to get size
     const headResp = await fetch(fileUrlBase, { method: 'HEAD', headers: { Authorization: `Bearer ${token}` } })
     const totalSize = Number(headResp.headers.get('content-length') || '0')
+    console.log("Total sz from head", totalSize / (1024 * 1024))
     if (!totalSize) throw new Error('Unable to determine file size')
 
     const newFile = new FileSystem.File(Paths.document, "audiobooks", bookId.toString(), `${fileId}_${fileName}`)
     newFile.create({ intermediates: true, overwrite: true })
-
-    // clear any existing file
-    //await FileSystem.writeAsStringAsync(destPath, '', { encoding: FileSystem.EncodingType.UTF8 }).catch(() => { })
 
     // prepare chunk map
 
@@ -173,6 +151,8 @@ export class DownloadManager {
         const bytes = new Uint8Array(arrayBuffer)
 
         results[c.index] = bytes
+
+        store.setProgress(bookId, fileId, bytes.byteLength)
       } catch (err) {
         if (c.retries < this.MAX_RETRIES) {
           c.retries++
@@ -187,22 +167,24 @@ export class DownloadManager {
     let pointer = 0
     const worker = async () => {
       while (pointer < chunks.length) {
-        const c = chunks[pointer++] // safe in JS single-threaded model
+        const c = chunks[pointer++]
         await downloadChunk(c)
 
         // update store progress (throttle persisted writes)
-        const received = Math.min((c.end + 1), totalSize)
-        const overallReceived = Math.min(received, totalSize) // rough - we rely on results array for final size
+        //const received = Math.min((c.end + 1), totalSize)
+        //const overallReceived = Math.min(received, totalSize) // rough - we rely on results array for final size
+        //store.setProgress(bookId, fileId, Math.ceil(overallReceived / totalSize))
+        //store.setProgress(bookId, fileId, Math.ceil(overallReceived))
 
         // persist progress occasionally
         const now = Date.now()
         if (now - this.lastPersistAt > this.PROGRESS_PERSIST_MS) {
           this.lastPersistAt = now
-          const key = `${bookId}_${fileId}`
+          //const key = `${bookId}_${fileId}`
           try {
             //await AsyncStorage.setItem(`download:${key}:progress`, String(progress))
           } catch (e) {
-            // ignore persistence failures
+            //ignore persistence failures
           }
         }
       }
