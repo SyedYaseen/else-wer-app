@@ -14,6 +14,8 @@ export type DownloadItem = {
   fileId: number
   fileName: string
   fileSize: number
+  author: string
+  title: string
   status: DownloadStatus
   progress: number
   localPath?: string
@@ -47,7 +49,7 @@ export const useDownloadStore = create<DownloadState>()(subscribeWithSelector((s
   progress: null,
   bookProgress: {},
   downloadManager: null,
-  addToQueue: ({ bookId, fileId, fileName, fileSize }) => set((s) => {
+  addToQueue: ({ bookId, fileId, fileName, fileSize, author, title }) => set((s) => {
     const key = `${bookId}_${fileId}`
     if (s.items[key]) return s
     const item: DownloadItem = {
@@ -55,6 +57,8 @@ export const useDownloadStore = create<DownloadState>()(subscribeWithSelector((s
       fileId,
       fileName,
       fileSize,
+      author,
+      title,
       status: 'pending',
       progress: 0,
       localPath: undefined,

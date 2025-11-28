@@ -69,8 +69,6 @@ export default function BookDetails() {
     })
   }, [bookId])
 
-
-
   const handleDownload = async () => {
     //try {
     try {
@@ -85,7 +83,7 @@ export default function BookDetails() {
     //let start = performance.now()
 
     for (const f of fileRows) {
-      f.local_path = await startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name, fileSize: f.file_size })
+      f.local_path = await startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name, fileSize: f.file_size, author: book?.author, title: book?.title })
       console.log("local path from book details", f)
     }
 
