@@ -7,8 +7,8 @@ import { Button, Pressable, StyleSheet, TextInput, View, Text } from 'react-nati
 
 export default function Login() {
   const router = useRouter();
-  //const [server, setServer] = useState('http://172.20.10.2:3000'); // TODO: replace with global audio-player-store
-  const [server, setServer] = useState('http://192.168.1.100:3000');
+  // const [server, setServer] = useState('http://172.20.10.2:3000'); // TODO: replace with global audio-player-store
+  const [server, setServer] = useState('http://192.168.1.24:3000');
 
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin');
@@ -31,7 +31,7 @@ export default function Login() {
     setServer((server) => {
       if (server === "http://172.20.10.2:3000")
         //        return "http://172.20.10.2:3000"
-        return "http://192.168.1.100:3000"
+        return "http://192.168.1.24:3000"
       else return "http://172.20.10.2:3000"
     })
   }

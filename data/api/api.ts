@@ -79,6 +79,17 @@ export async function removeLocalBook(bookId: number) {
   }
 }
 
+export async function removeAllLocalBooks() {
+  const destDir = FileSystem.Paths.join(FileSystem.Paths.document, "audiobooks");
+  console.log("Deleting all local media", destDir)
+  try {
+    const dir = new FileSystem.Directory(destDir)
+    dir.delete()
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 // Sync
 export const saveProgress = async (
   bookId: number,

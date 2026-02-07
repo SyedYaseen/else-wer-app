@@ -116,6 +116,16 @@ export async function getAllBooks(): Promise<Audiobook[]> {
   }
 }
 
+export async function getDownloadedBooks(): Promise<Audiobook[]> {
+  const db = await getDb();
+  try {
+    return db.getAllAsync<Audiobook>(`SELECT * FROM audiobooks WHERE downloaded=1 ORDER BY id ASC`);
+  } catch (e) {
+    console.log(e)
+    return [] as Audiobook[]
+  }
+}
+
 export async function getBook(bookId: number): Promise<Audiobook | null> {
   const db = await getDb();
   const row = await db.getFirstAsync<Audiobook>(
@@ -170,5 +180,14 @@ export async function searchBooks(query: string): Promise<Audiobook[]> {
      ORDER BY title ASC`,
     [q, q, q]
   );
+}
+
+export async function deleteAllRows() {
+  const db = await getDb();
+  await db.execAsync(`
+    DELETE FROM progress;
+    DELETE FROM files;
+    DELETE FROM audiobooks;
+  `);
 }
 
