@@ -4,6 +4,7 @@ import { ProgressRow } from '../database/models';
 import { setFileProgressLcl } from '../database/sync-repo';
 import { formatTime } from '@/utils/formatTime';
 import { apiFetch } from './fetch-wrapper';
+import { Directory } from 'expo-file-system';
 
 // user login
 export async function login(server: string, username: string, password: string) {
@@ -49,22 +50,22 @@ export async function fetchFileMetaFromServer(id: number) {
 
 export async function listFilesRecursively(path: string): Promise<string[]> {
   try {
-    const entries = await FileSystem.readDirectoryAsync(path);
+    const dir = new Directory(path);
+    const entries = dir.list();
     const result: string[] = [];
+
     for (const entry of entries) {
-      const fullPath = path + (path.endsWith("/") ? "" : "/") + entry;
-      const info = await FileSystem.getInfoAsync(fullPath);
-      if (info.isDirectory) {
-        const sub = await listFilesRecursively(fullPath + "/");
+      if (entry instanceof Directory) {
+        const sub = await listFilesRecursively(entry.uri);
         result.push(...sub);
       } else {
-        result.push(fullPath);
+        result.push(entry.uri);
       }
     }
     return result;
   } catch (e) {
-    console.error(e)
-    return [] as string[]
+    console.error('Error listing files:', e);
+    return [];
   }
 }
 
