@@ -19,6 +19,7 @@ function Library() {
   async function getBooks() {
     const books = await fetchBooks();
     setBooks(books.books);
+    await upsertAudiobooks(books.books) 
   }
 
   async function scanBooks() {

@@ -89,7 +89,8 @@ export default function MenuTab() {
           text: "Reset",
           style: "destructive",
           onPress: async () => {
-            await deleteAllRows();
+            await resetDb();
+            // await deleteAllRows();
           }
         }
       ]

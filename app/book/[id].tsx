@@ -1,6 +1,6 @@
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { fetchFileMetaFromServer, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
-import { deleteBookDb, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
+import { deleteBookDb, getAllBooks, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -69,6 +69,13 @@ export default function BookDetails() {
     })
   }, [bookId])
 
+  const test = async () => {
+    const books = await getAllBooks()
+    console.log(books)
+    // const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
+    // console.log("frow", fileRows)
+  }
+
   const handleDownload = async () => {
     //try {
     try {
@@ -79,7 +86,6 @@ export default function BookDetails() {
 
     setIsDownloading(true);
     const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId)
-
     //let start = performance.now()
 
     for (const f of fileRows) {
@@ -139,6 +145,10 @@ export default function BookDetails() {
           {isDownloading && (
             <Progress bookId={bookId} />
           )}
+          <TouchableOpacity onPress={test}>
+            <MaterialIcons name='wallet' size={40} color="#CCCCCC" />
+          </TouchableOpacity>
+
           {!isDownloaded && !isDownloading &&
             <TouchableOpacity onPress={handleDownload}>
               <MaterialIcons name='download' size={40} color="#CCCCCC" />
