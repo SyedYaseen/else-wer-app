@@ -126,27 +126,46 @@ export class DownloadManager {
     console.log("Total sz from head", totalSize / (1024 * 1024))
     if (!totalSize) throw new Error('Unable to determine file size')
 
-    const dir = new FileSystem.Directory(Paths.document, "audiobooks", bookId.toString())
+    // Step 1: create audiobooks/
+    const audiobooksDir = new FileSystem.Directory(Paths.document, "audiobooks")
+    console.log("audiobooksDir path:", audiobooksDir.uri)
+    console.log("audiobooksDir exists:", audiobooksDir.exists)
     try {
-      dir.create()
+      audiobooksDir.create()
+      console.log("audiobooksDir created")
     } catch (err: any) {
-      if (!err?.message?.includes('already exists')) {
-        throw err // rethrow if it's a different error
-      }
-      // directory already exists, that's fine
+      console.log("audiobooksDir create error (may be ok):", err?.message)
     }
 
-    const newFile = new FileSystem.File(dir, `${fileId}_${fileName}`)
+    // Step 2: create audiobooks/<bookId>/
+    const bookDir = new FileSystem.Directory(Paths.document, "audiobooks", bookId.toString())
+    console.log("bookDir path:", bookDir.uri)
+    console.log("bookDir exists:", bookDir.exists)
+    try {
+      bookDir.create()
+      console.log("bookDir created")
+    } catch (err: any) {
+      console.log("bookDir create error (may be ok):", err?.message)
+    }
+
+    // Step 3: create the file
+    const newFile = new FileSystem.File(bookDir, `${fileId}_${fileName}`)
+    console.log("newFile path:", newFile.uri)
+    console.log("newFile exists:", newFile.exists)
     try {
       if (newFile.exists) {
+        console.log("deleting existing file...")
         newFile.delete()
+        console.log("existing file deleted")
       }
       newFile.create()
+      console.log("newFile created successfully")
     } catch (err: any) {
-      if (!err?.message?.includes('already exists')) {
-        throw err
-      }
+      console.error("newFile create failed:", err?.message)
+      throw err
     }
+
+
     // prepare chunk map
 
     type Chunk = { index: number; start: number; end: number; retries: number }
