@@ -126,8 +126,15 @@ export class DownloadManager {
     console.log("Total sz from head", totalSize / (1024 * 1024))
     if (!totalSize) throw new Error('Unable to determine file size')
 
-    const newFile = new FileSystem.File(Paths.document, "audiobooks", bookId.toString(), `${fileId}_${fileName}`)
-    newFile.create({ intermediates: true, overwrite: true })
+    const dir = new FileSystem.Directory(Paths.document, "audiobooks", bookId.toString())
+    if (!dir.exists) {
+      dir.create() // sync, creates the directory
+    }
+
+    const newFile = new FileSystem.File(dir, `${fileId}_${fileName}`)
+    if (!newFile.exists) {
+      newFile.create()
+    }
 
     // prepare chunk map
 
@@ -208,6 +215,7 @@ export class DownloadManager {
       fHandle.close()
     } catch (err) {
       console.error("Failed to saved downloaded data to device")
+      throw err
     }
 
     // final verification: check size
