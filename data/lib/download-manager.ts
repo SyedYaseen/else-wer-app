@@ -127,15 +127,27 @@ export class DownloadManager {
     if (!totalSize) throw new Error('Unable to determine file size')
 
     const dir = new FileSystem.Directory(Paths.document, "audiobooks", bookId.toString())
+    console.log("Dir path:", dir.uri)
+    console.log("Dir exists:", dir.exists)
+
     if (!dir.exists) {
-      dir.create() // sync, creates the directory
+      console.log("Creating dir...")
+      dir.create()
+      console.log("Dir created")
+    } else {
+      console.log("Dir already exists, skipping create")
     }
 
     const newFile = new FileSystem.File(dir, `${fileId}_${fileName}`)
-    if (!newFile.exists) {
-      newFile.create()
-    }
+    console.log("File path:", newFile.uri)
+    console.log("File exists:", newFile.exists)
 
+    if (newFile.exists) {
+      console.log("Deleting existing file...")
+      newFile.delete()
+    }
+    newFile.create()
+    console.log("File ready")
     // prepare chunk map
 
     type Chunk = { index: number; start: number; end: number; retries: number }
