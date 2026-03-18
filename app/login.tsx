@@ -23,6 +23,7 @@ export default function Login() {
 
       router.replace('/');
     } catch (err: any) {
+      console.error("Failed to connect to server: ", server, err)
       alert(err.message);
     }
   };
@@ -69,5 +70,5 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   container: { padding: 20, flex: 1, justifyContent: 'center' },
-  input: { borderWidth: 1, marginBottom: 12, padding: 10, borderRadius: 5, color: '#FFFFFF' }
+  input: { borderWidth: 1, marginBottom: 12, padding: 10, backgroundColor: "#1c1c1e", borderRadius: 5, color: '#FFFFFF' }
 })
