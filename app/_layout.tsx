@@ -13,6 +13,8 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import MiniPlayer from '@/components/player/mini-player';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import { View, StyleSheet } from 'react-native';
+import { DownloadManager } from '@/data/lib/download-manager';
+import { useDownloadStore } from '@/components/store/download-strore';
 
 export {
   ErrorBoundary,
@@ -69,6 +71,14 @@ function RootLayoutNav() {
       }
     })();
 
+    const manager = new DownloadManager()
+    useDownloadStore.getState().setManagerRef(manager as any)
+
+    // optionally: start manager background processing (it starts when enqueue is called)
+    return () => {
+      // cleanup if necessary
+    }
+
   }, [])
 
   useEffect(() => {
@@ -95,11 +105,11 @@ function RootLayoutNav() {
         <Stack.Screen name="book/[id]" />
       </Stack>
 
-      {currentBook && (
+      {/* {currentBook && (
         <View style={[styles.miniPlayerWrapper, { bottom: tabBarHeight }]}>
           <MiniPlayer />
         </View>
-      )}
+      )} */}
 
     </ThemeProvider>
   );

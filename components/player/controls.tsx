@@ -37,8 +37,6 @@ export default function Controls() {
                 </TouchableOpacity>
             </View>
             <SecondaryControls />
-
-
         </View >
     )
 }
