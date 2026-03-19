@@ -88,15 +88,19 @@ const styles = StyleSheet.create({
         flex: 1,
         marginHorizontal: 12,
         gap: 2,
+
     },
     title: {
         fontFamily: 'DMSerifDisplay_400Regular',
         fontSize: 14,
         lineHeight: 17,
+        textTransform: 'capitalize'
+
     },
     author: {
         fontFamily: 'DMSans_300Light',
         fontSize: 11,
+        textTransform: 'capitalize'
     },
     playIcon: {
         marginRight: 4,

@@ -240,10 +240,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 26,
     marginBottom: 4,
+    textTransform: 'capitalize'
   },
   authorText: {
     fontFamily: 'DMSans_400Regular',
     fontSize: 14,
+    textTransform: 'capitalize'
   },
   actions: {
     flexDirection: 'row',

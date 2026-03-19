@@ -107,15 +107,18 @@ const styles = StyleSheet.create({
         fontFamily: 'DMSerifDisplay_400Regular',
         fontSize: 13,
         lineHeight: 17,
+        textTransform: 'capitalize'
     },
     author: {
         fontFamily: 'DMSans_400Regular',
         fontSize: 11,
+        textTransform: 'capitalize'
     },
     series: {
         fontFamily: 'DMSans_300Light',
         fontSize: 10,
         fontStyle: 'italic',
+        textTransform: 'capitalize'
     },
 });
 
