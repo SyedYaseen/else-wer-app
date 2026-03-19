@@ -1,35 +1,40 @@
-import { useDownloadStore } from "../store/download-strore"
+// components/downloads/progress.tsx — Folio Progress Ring
+
+import { useDownloadStore } from "../store/download-strore";
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useTheme } from '@/components/hooks/useTheme';
 
-const SIZE = 40;
-const STROKE_WIDTH = 7;
+const SIZE = 52;
+const STROKE_WIDTH = 3;
 const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function Progress({ bookId }: { bookId: number }) {
-  const bookProgress = useDownloadStore(s => s.bookProgress)
-  const curr = bookProgress[bookId]
-  if (!curr) return <></>
-  const pcnt = (curr.currentProgress / curr.totalSize) * 100
+  const T = useTheme();
+  const bookProgress = useDownloadStore(s => s.bookProgress);
+  const curr = bookProgress[bookId];
 
+  if (!curr) return null;
+
+  const pcnt = Math.min((curr.currentProgress / curr.totalSize) * 100, 100);
   const strokeDashoffset = CIRCUMFERENCE - (pcnt / 100) * CIRCUMFERENCE;
 
   return (
     <View style={styles.container}>
       <Svg width={SIZE} height={SIZE}>
-        {/* Background Circle (The empty part of the ring) */}
+        {/* Track */}
         <Circle
-          stroke="#e6e6e6"
+          stroke={T.inkHairline}
           fill="none"
-          cx={SIZE / 2} // Center X
-          cy={SIZE / 2} // Center Y
+          cx={SIZE / 2}
+          cy={SIZE / 2}
           r={RADIUS}
           strokeWidth={STROKE_WIDTH}
         />
-
+        {/* Progress arc */}
         <Circle
-          stroke="#007aff"
+          stroke={T.accent}
           fill="none"
           cx={SIZE / 2}
           cy={SIZE / 2}
@@ -41,12 +46,14 @@ export default function Progress({ bookId }: { bookId: number }) {
           transform={`rotate(-90, ${SIZE / 2}, ${SIZE / 2})`}
         />
       </Svg>
-
-      {/* Text Label (Placed in the center) */}
-      <View style={styles.textContainer}>
-        <Text style={styles.progressText}>
-          {pcnt.toFixed(0)}%
-        </Text>
+      {/* Centred percentage label */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.labelWrap}>
+          <Text style={[styles.pcntText, { color: T.ink }]}>
+            {pcnt.toFixed(0)}
+          </Text>
+          <Text style={[styles.pcntSymbol, { color: T.inkSubtle }]}>%</Text>
+        </View>
       </View>
     </View>
   );
@@ -56,16 +63,22 @@ const styles = StyleSheet.create({
   container: {
     width: SIZE,
     height: SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  textContainer: {
-    position: 'absolute', // Allows text to overlay the SVG
-    justifyContent: 'center',
+  labelWrap: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  progressText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  }
+  pcntText: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 13,
+    lineHeight: 16,
+  },
+  pcntSymbol: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 9,
+    lineHeight: 16,
+    marginTop: 1,
+  },
 });

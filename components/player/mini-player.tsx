@@ -1,48 +1,61 @@
+// components/player/mini-player.tsx — Folio MiniPlayer
+// ⚠️ Logic unchanged from original. L&F only.
+
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { useAudioController } from '../hooks/useAudioController';
 import { useAudioPlayerStore } from '../store/audio-player-store';
-import { router, usePathname } from "expo-router";
+import { router, usePathname } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '@/components/hooks/useTheme';
 
 export default function MiniPlayer() {
-    const { player, onPlay } = useAudioController()
-    const currentBook = useAudioPlayerStore(s => s.currentBook)
+    const { player, onPlay } = useAudioController();
+    const currentBook = useAudioPlayerStore(s => s.currentBook);
+    const server = useAudioPlayerStore(s => s.server);
+    const T = useTheme();
 
     const progress =
         player.duration > 0 ? player.currentTime / player.duration : 0;
 
     const pathname = usePathname();
-    if (pathname.startsWith("/player/"))
-        return null
-    const server = useAudioPlayerStore(s => s.server)
-    return (
-        <Pressable onPress={() => router.push(`/player/${currentBook?.id}`)} >
-            <View style={styles.container}>
-                {/* Left - Cover */}
-                {server && currentBook?.cover_art && <Image
-                    source={{
-                        uri: `${server}${currentBook?.cover_art}`
-                    }}
-                    style={styles.cover}
-                />
-                }
+    if (pathname.startsWith('/player/')) return null;
 
-                {/* Middle - Title */}
+    return (
+        <Pressable onPress={() => router.push(`/player/${currentBook?.id}`)}>
+            <View style={[styles.container, { backgroundColor: T.surface, borderTopColor: T.inkHairline }]}>
+
+                {/* Cover */}
+                {server && currentBook?.cover_art && (
+                    <Image
+                        source={{ uri: `${server}${currentBook?.cover_art}` }}
+                        style={styles.cover}
+                    />
+                )}
+
+                {/* Title */}
                 <View style={styles.textContainer}>
-                    <Text numberOfLines={1} style={styles.title}>{currentBook?.title}</Text>
+                    <Text numberOfLines={1} style={[styles.title, { color: T.ink }]}>
+                        {currentBook?.title}
+                    </Text>
+                    <Text numberOfLines={1} style={[styles.author, { color: T.inkSubtle }]}>
+                        {currentBook?.author}
+                    </Text>
                 </View>
-                <TouchableOpacity onPress={async () => await onPlay()}>
+
+                {/* Play / Pause */}
+                <TouchableOpacity onPress={async () => await onPlay()} hitSlop={8}>
                     <MaterialIcons
-                        name={player.playing ? "pause-circle" : "play-circle"}
-                        size={40}
-                        color="#555555"
-                        style={{ marginRight: 8 }}
+                        name={player.playing ? 'pause-circle' : 'play-circle'}
+                        size={36}
+                        color={T.accent}
+                        style={styles.playIcon}
                     />
                 </TouchableOpacity>
-                {/* Progress Bar */}
-                <View style={styles.progressBackground}>
-                    <View style={[styles.progressFill, { flex: progress }]} />
+
+                {/* Progress bar — pinned to bottom */}
+                <View style={[styles.progressBackground, { backgroundColor: T.inkHairline }]}>
+                    <View style={[styles.progressFill, { flex: progress, backgroundColor: T.accent }]} />
                     <View style={{ flex: 1 - progress }} />
                 </View>
             </View>
@@ -52,45 +65,42 @@ export default function MiniPlayer() {
 
 const styles = StyleSheet.create({
     container: {
-        height: 60,
-        backgroundColor: '#222',
+        height: 64,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 8,
-        position: 'relative'
+        paddingHorizontal: 12,
+        borderTopWidth: 0.5,
+        position: 'relative',
     },
     cover: {
-        width: 40,
-        height: 40,
-        borderRadius: 4
+        width: 42,
+        height: 42,
+        borderRadius: 6,
     },
     textContainer: {
         flex: 1,
-        marginHorizontal: 8
+        marginHorizontal: 12,
+        gap: 2,
     },
     title: {
-        color: '#fff',
+        fontFamily: 'DMSerifDisplay_400Regular',
         fontSize: 14,
-        fontWeight: '600'
+        lineHeight: 17,
     },
-    playButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#444',
-        justifyContent: 'center',
-        alignItems: 'center'
+    author: {
+        fontFamily: 'DMSans_300Light',
+        fontSize: 11,
+    },
+    playIcon: {
+        marginRight: 4,
     },
     progressBackground: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: 3,
+        height: 2,
         flexDirection: 'row',
-        backgroundColor: '#555'
     },
-    progressFill: {
-        backgroundColor: '#1DB954'
-    }
+    progressFill: {},
 });

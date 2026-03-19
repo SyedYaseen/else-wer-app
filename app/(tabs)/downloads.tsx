@@ -1,8 +1,12 @@
-import { View, Text, StyleSheet } from 'react-native'
-import { DownloadItem, useDownloadStore } from '@/components/store/download-strore';
-import Progress from '@/components/downloads/progress';
-import { MaterialIcons } from '@expo/vector-icons';
+// app/(tabs)/downloads.tsx — Folio Downloads Screen
+// All colours sourced from useTheme() — responds to system light / dark mode.
 
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { DownloadItem, useDownloadStore } from '@/components/store/download-strore';
+import { useTheme, Theme } from '@/components/hooks/useTheme';
+
+// ── Types ────────────────────────────────────────────────────────────────────
 interface BookGroup {
   bookId: number;
   author: string;
@@ -13,139 +17,182 @@ interface BookGroup {
   files: DownloadItem[];
 }
 
-// --- CONSTANTS & THEMING ---
-const COLORS = {
-  BACKGROUND: '#121212',
-  CARD_BACKGROUND: '#1E1E1E',
-  TEXT_PRIMARY: '#FFFFFF',
-  TEXT_SECONDARY: '#B3B3B3',
-  BORDER: '#333333',
-  PROGRESS_GREEN: '#4CAF50',
-  PROGRESS_BLUE: '#2196F3',
-};
-
-const groupItemsByBook = (items: Record<string, DownloadItem>): Record<number, BookGroup> => {
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const groupItemsByBook = (
+  items: Record<string, DownloadItem>,
+): Record<number, BookGroup> => {
   const grouped: Record<number, BookGroup> = {};
 
   Object.values(items).forEach(item => {
     const id = item.bookId;
-
     if (!grouped[id]) {
-      // Initialize the group if it doesn't exist
       grouped[id] = {
         bookId: id,
         title: item.title,
         author: item.author || 'Unknown Author',
         totalProgress: 0,
         totalSize: 0,
-        status: 'pending', // Will be determined below
+        status: 'pending',
         files: [],
       };
     }
-
     grouped[id].totalProgress += item.progress;
     grouped[id].totalSize += item.fileSize;
     grouped[id].files.push(item);
   });
 
-  // Derive overall status for the group
   Object.values(grouped).forEach(group => {
     const isDownloading = group.files.some(f => f.status === 'downloading');
     const isPaused = group.files.some(f => f.status === 'paused');
-    const isComplete = group.totalProgress === group.totalSize && group.totalSize > 0;
+    const isComplete =
+      group.totalProgress === group.totalSize && group.totalSize > 0;
 
-    if (isComplete) {
-      group.status = 'completed';
-    } else if (isDownloading) {
-      group.status = 'downloading';
-    } else if (isPaused) {
-      group.status = 'paused';
-    } else {
-      group.status = 'idle';
-    }
+    if (isComplete) group.status = 'completed';
+    else if (isDownloading) group.status = 'downloading';
+    else if (isPaused) group.status = 'paused';
+    else group.status = 'idle';
   });
 
   return grouped;
 };
 
-const ProgressBar = ({ progressPcnt, status }: { progressPcnt: number, status: string }) => {
-  let color = COLORS.PROGRESS_BLUE;
-  if (status === 'completed') color = COLORS.PROGRESS_GREEN;
-  else if (status === 'paused' || status === 'idle') color = COLORS.TEXT_SECONDARY;
-
-  return (
-    <View style={styles.barContainer}>
-      <View style={[
-        styles.progressBar,
-        { width: `${progressPcnt}%`, backgroundColor: color }
-      ]} />
-    </View>
-  );
+const getStatusColor = (status: string, T: Theme): string => {
+  switch (status) {
+    case 'completed': return T.sage;
+    case 'downloading': return T.accent;
+    default: return T.inkSubtle;
+  }
 };
 
-export default function DownloadTab() {
-  const items = useDownloadStore(s => s.items) as Record<string, DownloadItem>;
+const statusLabel = (status: string): string =>
+  status.charAt(0).toUpperCase() + status.slice(1);
 
-  // Group the files whenever the items change
-  const groupedBooks = groupItemsByBook(items);
-  const bookList = Object.values(groupedBooks);
+// ── Progress Bar ─────────────────────────────────────────────────────────────
+function ProgressBar({
+  progressPcnt,
+  status,
+  T,
+}: {
+  progressPcnt: number;
+  status: string;
+  T: Theme;
+}) {
+  return (
+    <View style={[styles.barTrack, { backgroundColor: T.inkHairline }]}>
+      <View
+        style={[
+          styles.barFill,
+          {
+            width: `${Math.min(progressPcnt, 100)}%` as any,
+            backgroundColor: getStatusColor(status, T),
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+// ── Screen ───────────────────────────────────────────────────────────────────
+export default function DownloadTab() {
+  const T = useTheme();
+  const items = useDownloadStore(s => s.items) as Record<string, DownloadItem>;
+  const bookList = Object.values(groupItemsByBook(items));
 
   if (bookList.length === 0) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={styles.emptyText}>No active downloads found.</Text>
+      <View style={[styles.emptyContainer, { backgroundColor: T.background }]}>
+        <MaterialIcons name="arrow-circle-down" size={40} color={T.inkHairline} />
+        <Text style={[styles.emptyTitle, { color: T.ink }]}>No downloads</Text>
+        <Text style={[styles.emptyBody, { color: T.inkSubtle }]}>
+          Files you download will appear here.
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: T.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       {bookList.map(book => {
-        const overallPcnt = (book.totalProgress / book.totalSize) * 100;
+        const overallPcnt =
+          book.totalSize > 0
+            ? (book.totalProgress / book.totalSize) * 100
+            : 0;
+        const spineColor = getStatusColor(book.status, T);
 
         return (
-          <View key={book.bookId} style={styles.card}>
-            <View style={styles.mainContent}>
-              {/* Left Side: Book/Author Details */}
-              <View style={styles.textDetails}>
-                <Text style={styles.bookNameText} numberOfLines={1}>
+          <View
+            key={book.bookId}
+            style={[
+              styles.card,
+              {
+                backgroundColor: T.surface,
+                borderColor: T.inkHairline,
+              },
+            ]}
+          >
+            {/* ── Header ── */}
+            <View style={styles.cardHeader}>
+              {/* Status spine */}
+              <View style={[styles.spine, { backgroundColor: spineColor }]} />
+
+              <View style={styles.headerText}>
+                <Text
+                  style={[styles.bookTitle, { color: T.ink }]}
+                  numberOfLines={1}
+                >
                   {book.title}
                 </Text>
-                <Text style={styles.authorText} numberOfLines={1}>
-                  By {book.author}
+                <Text
+                  style={[styles.authorText, { color: T.inkMuted }]}
+                  numberOfLines={1}
+                >
+                  {book.author}
                 </Text>
               </View>
 
-              {/* Right Side: Overall Progress */}
-              <View style={styles.progressArea}>
-                <Text style={[styles.statusText, { color: COLORS.TEXT_SECONDARY }]}>
-                  {book.status.toUpperCase()}
-                </Text>
-                <Text style={styles.progressText}>
-                  {overallPcnt.toFixed(2)}%
+              {/* Status badge */}
+              <View style={styles.badge}>
+                <View style={[styles.dot, { backgroundColor: spineColor }]} />
+                <Text style={[styles.badgeText, { color: spineColor }]}>
+                  {statusLabel(book.status)}
                 </Text>
               </View>
             </View>
 
-            {/* Full Width Progress Bar (Overall Book Progress) */}
-            <ProgressBar progressPcnt={overallPcnt} status={book.status} />
-            {/* Optional: Show individual files below the main bar */}
-            <View style={styles.fileList}>
+            {/* ── Overall progress ── */}
+            <View style={styles.progressRow}>
+              <ProgressBar progressPcnt={overallPcnt} status={book.status} T={T} />
+              <Text style={[styles.progressPcnt, { color: T.inkMuted }]}>
+                {overallPcnt.toFixed(0)}%
+              </Text>
+            </View>
+
+            {/* ── File list ── */}
+            <View style={[styles.fileList, { borderTopColor: T.inkHairline }]}>
               {book.files.map(file => {
-                const filePcnt = (file.progress / file.fileSize) * 100;
+                const filePcnt =
+                  file.fileSize > 0
+                    ? (file.progress / file.fileSize) * 100
+                    : 0;
                 return (
-                  <View key={file.fileId} style={styles.fileItem}>
+                  <View key={file.fileId} style={styles.fileRow}>
                     <MaterialIcons
-                      name="book"
-                      size={14}
-                      color={COLORS.TEXT_SECONDARY}
-                      style={{ marginRight: 5 }}
+                      name="headphones"
+                      size={12}
+                      color={T.inkSubtle}
                     />
-                    <Text style={styles.fileNameText} numberOfLines={1}>
+                    <Text
+                      style={[styles.fileName, { color: T.inkSubtle }]}
+                      numberOfLines={1}
+                    >
                       {file.fileName}
                     </Text>
-                    <Text style={styles.fileProgressText}>
-                      {filePcnt.toFixed(2)}%
+                    <Text style={[styles.filePcnt, { color: T.inkSubtle }]}>
+                      {filePcnt.toFixed(0)}%
                     </Text>
                   </View>
                 );
@@ -154,99 +201,122 @@ export default function DownloadTab() {
           </View>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
-// --- STYLESHEETS ---
-
+// ── Styles (layout only — no colour values) ──────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1 },
+  content: { padding: 16, paddingBottom: 40 },
+
+  emptyContainer: {
     flex: 1,
-    padding: 10,
-    backgroundColor: COLORS.BACKGROUND,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  emptyText: {
-    color: COLORS.TEXT_SECONDARY,
-    fontSize: 16,
-  },
-  card: {
-    backgroundColor: COLORS.CARD_BACKGROUND,
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.BORDER,
-    marginBottom: 10,
-    elevation: 2,
-  },
-  mainContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 5,
-  },
-  textDetails: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  bookNameText: {
-    color: COLORS.TEXT_PRIMARY,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  authorText: {
-    color: COLORS.TEXT_SECONDARY,
-    fontSize: 14,
-    marginTop: 2,
-  },
-  // Progress Bar Styles
-  barContainer: {
-    height: 4,
-    width: '100%',
-    backgroundColor: COLORS.BORDER,
-    borderRadius: 2,
+  emptyTitle: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 20,
     marginTop: 8,
   },
-  progressBar: {
-    height: '100%',
-    borderRadius: 2,
+  emptyBody: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 13,
   },
-  progressArea: {
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
+
+  // Card
+  card: {
+    borderRadius: 14,
+    borderWidth: 0.5,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  progressText: {
-    color: COLORS.TEXT_PRIMARY,
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  // File List Styles (for nested files)
-  fileList: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.BORDER,
-    paddingTop: 8,
-  },
-  fileItem: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    paddingRight: 14,
+    paddingVertical: 14,
+    gap: 12,
   },
-  fileNameText: {
-    flex: 1, // Allows file name to take up available space
-    color: COLORS.TEXT_SECONDARY,
-    fontSize: 12,
+  spine: {
+    width: 3,
+    height: 44,
   },
-  fileProgressText: {
-    color: COLORS.TEXT_SECONDARY,
+  headerText: { flex: 1 },
+  bookTitle: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  authorText: {
+    fontFamily: 'DMSans_300Light',
     fontSize: 12,
-    marginLeft: 10,
-    fontWeight: '500',
-  }
+    marginTop: 2,
+  },
+
+  // Badge
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  badgeText: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 10,
+    letterSpacing: 0.08,
+    textTransform: 'uppercase',
+  },
+
+  // Progress
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+  },
+  barTrack: {
+    flex: 1,
+    height: 2,
+    borderRadius: 1,
+  },
+  barFill: {
+    height: 2,
+    borderRadius: 1,
+  },
+  progressPcnt: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 11,
+    minWidth: 30,
+    textAlign: 'right',
+  },
+
+  // File list
+  fileList: {
+    borderTopWidth: 0.5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fileName: {
+    flex: 1,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 11,
+  },
+  filePcnt: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 11,
+  },
 });

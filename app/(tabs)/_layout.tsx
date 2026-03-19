@@ -1,58 +1,89 @@
+// app/(tabs)/_layout.tsx — Folio Tab Layout
+// Responds to system light / dark mode automatically via useTheme().
+
 import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
-import Colors from '@/constants/constants';
-import { useColorScheme } from '@/components/hooks/useColorScheme';
 import { useClientOnlyValue } from '@/components/hooks/useClientOnlyValue';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme, Theme } from '@/components/hooks/useTheme';
 
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
+function TabIcon({
+  name,
+  color,
+}: {
+  name: React.ComponentProps<typeof MaterialIcons>['name'];
   color: string;
 }) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+  return <MaterialIcons name={name} size={22} color={color} />;
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const T = useTheme();
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
         headerShown: useClientOnlyValue(false, true),
+
+        // ── Tab bar ──────────────────────────────────────────────────────────
+        tabBarStyle: {
+          backgroundColor: T.background,
+          borderTopWidth: 0.5,
+          borderTopColor: T.inkHairline,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        tabBarActiveTintColor: T.accent,
+        tabBarInactiveTintColor: T.inkSubtle,
+        tabBarLabelStyle: {
+          fontFamily: 'DMSans_500Medium',
+          fontSize: 10,
+          letterSpacing: 0.04,
+          marginTop: 2,
+        },
+
+        // ── Header ───────────────────────────────────────────────────────────
+        headerStyle: {
+          backgroundColor: T.background,
+          borderBottomWidth: 0.5,
+          borderBottomColor: T.inkHairline,
+          elevation: 0,
+          shadowOpacity: 0,
+        } as any,
+        headerTitleStyle: {
+          fontFamily: 'DMSerifDisplay_400Regular',
+          fontSize: 20,
+          color: T.ink,
+        },
+        headerTintColor: T.ink,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons color={color} size={28} name="home" />
-          ),
+          title: 'Library',
+          tabBarIcon: ({ color }) => <TabIcon name="menu-book" color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="menu"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons color={color} size={28} name="menu" />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="downloads"
         options={{
-          title: "Downloads",
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons color={color} size={28} name="download" />
-          ),
+          title: 'Downloads',
+          tabBarIcon: ({ color }) => <TabIcon name="arrow-circle-down" color={color} />,
+        }}
+      />
+
+      <Tabs.Screen
+        name="menu"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <TabIcon name="tune" color={color} />,
         }}
       />
     </Tabs>
-
   );
 }
-

@@ -1,5 +1,6 @@
+// app/_layout.tsx — Folio Root Layout
+
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -9,16 +10,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/components/hooks/useColorScheme';
 import { initDb } from '@/data/database/initdb';
 import useInitPlayer from '@/components/hooks/useInitPlayer';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import MiniPlayer from '@/components/player/mini-player';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import { View, StyleSheet } from 'react-native';
 import { DownloadManager } from '@/data/lib/download-manager';
 import { useDownloadStore } from '@/components/store/download-strore';
+import { ThemeProvider, useTheme } from '@/components/hooks/useTheme';
 
-export {
-  ErrorBoundary,
-} from 'expo-router';
+// ── Folio font imports from expo-google-fonts ─────────────────────────────────
+import {
+  DMSerifDisplay_400Regular,
+  DMSerifDisplay_400Regular_Italic,
+} from '@expo-google-fonts/dm-serif-display';
+import {
+  DMSans_300Light,
+  DMSans_400Regular,
+  DMSans_500Medium,
+} from '@expo-google-fonts/dm-sans';
+
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -29,6 +39,12 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    // ── Folio fonts ───────────────────────────────────────────────────────────
+    DMSerifDisplay_400Regular,
+    DMSerifDisplay_400Regular_Italic,
+    DMSans_300Light,
+    DMSans_400Regular,
+    DMSans_500Medium,
     ...FontAwesome.font,
   });
 
@@ -37,33 +53,63 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+    if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
+  if (!loaded) return null;
 
   return <RootLayoutNav />;
 }
+
+// ── ThemedStack — must be inside ThemeProvider to call useTheme() ─────────────
+
+function ThemedStack() {
+  const T = useTheme();
+
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: T.background,
+        },
+        headerTitleStyle: {
+          fontFamily: 'DMSerifDisplay_400Regular',
+          fontSize: 18,
+          color: T.ink,
+        },
+        headerTintColor: T.ink,
+        headerShadowVisible: false,
+        contentStyle: {
+          backgroundColor: T.background,
+          borderTopWidth: 0.5,
+          borderTopColor: T.inkHairline,
+        },
+      }}
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" />
+      <Stack.Screen name="book/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="player/[id]" options={{ headerShown: false }} />
+    </Stack>
+  );
+}
+
+// ── RootLayoutNav ─────────────────────────────────────────────────────────────
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
-  // const tabBarHeight = useBottomTabBarHeight();
+
   const tabBarHeight = 84;
-  const currentBook = useAudioPlayerStore(s => s.currentBook)
-  useInitPlayer()
+  const currentBook = useAudioPlayerStore(s => s.currentBook);
+
+  useInitPlayer();
 
   useEffect(() => {
     (async () => {
       try {
-        // await resetDb()
-        // await AsyncStorage.clear()
         await initDb();
         console.log("Database initialized!");
       } catch (err) {
@@ -71,15 +117,13 @@ function RootLayoutNav() {
       }
     })();
 
-    const manager = new DownloadManager()
-    useDownloadStore.getState().setManagerRef(manager as any)
+    const manager = new DownloadManager();
+    useDownloadStore.getState().setManagerRef(manager as any);
 
-    // optionally: start manager background processing (it starts when enqueue is called)
     return () => {
       // cleanup if necessary
-    }
-
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
     const checkToken = async () => {
@@ -89,34 +133,28 @@ function RootLayoutNav() {
       }
       setChecking(false);
     };
-
     checkToken();
   }, [pathname]);
 
-  if (checking) {
-    return null;
-  }
+  if (checking) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen name="book/[id]" />
-      </Stack>
+    <ThemeProvider>
+      <ThemedStack />
 
+      {/* Mini player — uncomment to re-enable */}
       {/* {currentBook && (
         <View style={[styles.miniPlayerWrapper, { bottom: tabBarHeight }]}>
           <MiniPlayer />
         </View>
       )} */}
-
     </ThemeProvider>
   );
 }
+
 const styles = StyleSheet.create({
   miniPlayerWrapper: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
   },
