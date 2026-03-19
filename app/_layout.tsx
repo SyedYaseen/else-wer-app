@@ -143,11 +143,11 @@ function RootLayoutNav() {
       <ThemedStack />
 
       {/* Mini player — uncomment to re-enable */}
-      {/* {currentBook && (
+      {currentBook && (
         <View style={[styles.miniPlayerWrapper, { bottom: tabBarHeight }]}>
           <MiniPlayer />
         </View>
-      )} */}
+      )}
     </ThemeProvider>
   );
 }
