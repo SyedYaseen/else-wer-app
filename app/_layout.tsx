@@ -97,13 +97,9 @@ function ThemedStack() {
 // ── RootLayoutNav ─────────────────────────────────────────────────────────────
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
-
-  const tabBarHeight = 84;
-  const currentBook = useAudioPlayerStore(s => s.currentBook);
 
   useInitPlayer();
 
@@ -141,13 +137,6 @@ function RootLayoutNav() {
   return (
     <ThemeProvider>
       <ThemedStack />
-
-      {/* Mini player — uncomment to re-enable */}
-      {currentBook && (
-        <View style={[styles.miniPlayerWrapper, { bottom: tabBarHeight }]}>
-          <MiniPlayer />
-        </View>
-      )}
     </ThemeProvider>
   );
 }
