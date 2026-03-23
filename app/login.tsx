@@ -1,5 +1,3 @@
-// app/login.tsx — Folio Login Screen
-
 import React, { useState } from 'react';
 import {
   View,

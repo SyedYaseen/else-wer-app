@@ -199,3 +199,16 @@ export async function getLclInProgress() {
     ORDER BY updated_at DESC;
     `)
 }
+
+export type AudiobookWithProgress = Audiobook & ProgressRow;
+
+export async function getInprogressBooks() {
+  const db = await getDb()
+  return await db.getAllAsync<AudiobookWithProgress>(`
+    SELECT a.*, p.file_id, p.progress_ms, p.complete, p.updated_at
+    FROM audiobooks a
+    INNER JOIN progress p ON p.book_id = a.id
+    WHERE p.complete = false
+    ORDER BY p.updated_at DESC;
+  `)
+}

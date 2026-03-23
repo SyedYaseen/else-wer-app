@@ -152,7 +152,7 @@ export async function saveProgressServer(
   }
 }
 
-export async function listInProgressServer() {
+export async function getServerInProgress() {
   const res = await apiFetch(
     "/list_inprogress"
   )

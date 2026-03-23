@@ -1,5 +1,5 @@
-import { getBookProgressServer, getFileProgressServer, listInProgressServer, saveProgressServer } from "../api/api";
-import { getLclInProgress } from "../database/audiobook-repo";
+import { getBookProgressServer, getFileProgressServer, getServerInProgress, saveProgressServer } from "../api/api";
+import { getInprogressBooks, getLclInProgress } from "../database/audiobook-repo";
 import { FileRow, ProgressRow } from "../database/models";
 import { getFileProgressLcl, getProgressForBookLcl, setFileProgressLcl } from "../database/sync-repo";
 
@@ -111,8 +111,8 @@ export async function getFileProgress(bookId: number, fileId: number) {
 
 export async function listInProgressBooksMergeConflicts() {
   try {
-    const serverProgress = await listInProgressServer();   // ProgressRow[]
-    const localProgress = await getLclInProgress();      // ProgressRow[] (no join)
+    const serverProgress = await getServerInProgress();
+    const localProgress = await getLclInProgress();
 
     const serverMap = new Map(serverProgress.map(p => [p.book_id, p]));
     const localMap = new Map(localProgress.map(p => [p.book_id, p]));
@@ -135,8 +135,7 @@ export async function listInProgressBooksMergeConflicts() {
       }
     }
 
-    // // Now just fetch the final merged book list from local
-    // return await getLclBooksInProgress();  // Audiobook[] ready for UI
+    return await getInprogressBooks();
   }
   catch (ex) {
     console.error("Failed", ex)

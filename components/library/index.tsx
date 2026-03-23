@@ -1,8 +1,6 @@
-// components/library.tsx — Folio Library
-
 import { fetchBooks, scanServerFiles } from "@/data/api/api";
 import { Audiobook } from "@/data/database/models";
-import { getAllBooks, getLclInProgress, upsertAudiobooks } from "@/data/database/audiobook-repo";
+import { AudiobookWithProgress, getAllBooks, getLclInProgress, upsertAudiobooks } from "@/data/database/audiobook-repo";
 import {
   FlatList,
   View,
@@ -12,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Image
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BookCard from './book-card';
@@ -19,6 +18,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/components/hooks/useTheme';
 import { listInProgressBooksMergeConflicts } from "@/data/lib/conflict-handling";
+import { Link } from "expo-router";
+import { useAudioPlayerStore } from "../store/audio-player-store";
 
 const NUM_COLUMNS = 2;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -32,8 +33,10 @@ function Library() {
   const insets = useSafeAreaInsets();
 
   const [books, setBooks] = useState<Audiobook[]>([]);
+  const [inProgressbooks, setinProgressBooks] = useState<AudiobookWithProgress[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [scanning, setScanning] = useState(false);
+
 
   async function getBooks() {
     const preScannedBooks = await getAllBooks()
@@ -47,7 +50,10 @@ function Library() {
   }
 
   async function getBooksInProgress() {
-    await listInProgressBooksMergeConflicts()
+    const inprogress = await listInProgressBooksMergeConflicts()
+    if (inprogress && inprogress.length > 0) {
+      setinProgressBooks(inprogress)
+    }
   }
 
   async function scanBooks() {
@@ -167,6 +173,7 @@ function Library() {
           </View>
         )}
         numColumns={NUM_COLUMNS}
+        ListHeaderComponent={<InProgressRow books={inProgressbooks} />}
         contentContainerStyle={[styles.listContent, { paddingHorizontal: H_PADDING }]}
         columnWrapperStyle={styles.columnWrapper}
         showsVerticalScrollIndicator={false}
@@ -183,8 +190,70 @@ function Library() {
   );
 }
 
+function InProgressRow({ books }: { books: AudiobookWithProgress[] }) {
+  const T = useTheme();
+  if (!books.length) return null;
+
+  return (
+    <View>
+      <Text style={[styles.sectionTitle, { color: T.ink }]}>Continue Listening</Text>
+      <FlatList
+        data={books}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={b => b.id.toString()}
+        contentContainerStyle={{ gap: 12, paddingRight: H_PADDING, paddingBottom: 25 }}
+        renderItem={({ item }) => <InProgressCard book={item} />}
+      />
+    </View>
+  );
+}
+
+function InProgressCard({ book }: { book: AudiobookWithProgress }) {
+  const T = useTheme();
+  const server = useAudioPlayerStore(s => s.server);
+  const progress = book.duration ? book.progress_ms / book.duration : 0;
+  const CARD_WIDTH = 100;
+  const COVER_HEIGHT = CARD_WIDTH * 1.35;
+
+  return (
+    <Link href={{ pathname: `/player/[id]`, params: { id: book.id, title: book.title, author: book.author } }} asChild>
+      <TouchableOpacity activeOpacity={0.75} style={[styles.inProgressCard, { width: CARD_WIDTH, backgroundColor: T.surface, borderColor: T.inkHairline }]}>
+        {server && book.cover_art ? (
+          <Image
+            source={{ uri: `${server}${book.cover_art}` }}
+            style={{ width: CARD_WIDTH, height: COVER_HEIGHT }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[{ width: CARD_WIDTH, height: COVER_HEIGHT, alignItems: 'center', justifyContent: 'center', backgroundColor: T.surfaceDeep }]}>
+            <Text style={{ fontFamily: 'DMSerifDisplay_400Regular', fontSize: 32, opacity: 0.4, color: T.inkSubtle }}>
+              {book.title?.charAt(0).toUpperCase() ?? '?'}
+            </Text>
+          </View>
+        )}
+        <View style={{ paddingHorizontal: 7, paddingTop: 7, paddingBottom: 4 }}>
+          <Text style={[styles.inProgressTitle, { color: T.ink }]} numberOfLines={2}>
+            {book.title}
+          </Text>
+        </View>
+        <View style={[styles.trackBg, { backgroundColor: T.inkHairline }]}>
+          <View style={[styles.trackFill, { backgroundColor: T.accent, width: `${Math.min(progress * 100, 100)}%` }]} />
+        </View>
+      </TouchableOpacity>
+    </Link>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
+  inProgressTitle: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 11,
+    lineHeight: 15,
+    textTransform: 'capitalize',
+  },
 
   // ── Page header ─────────────────────────────────────────────────────────────
   pageHeader: {
@@ -225,6 +294,28 @@ const styles = StyleSheet.create({
   rescanBtnText: {
     fontFamily: 'DMSans_500Medium',
     fontSize: 12,
+  },
+  // ── Inprogress ───────────────────────────────────────────────────────────────────
+  sectionTitle: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 20,
+    lineHeight: 24,
+    marginBottom: 10
+  },
+  inProgressList: {
+    paddingBottom: 4,
+  },
+  inProgressCard: {
+    borderRadius: 8,
+    borderWidth: 0.5,
+    overflow: 'hidden',
+  },
+  trackBg: {
+    height: 3,
+    width: '100%',
+  },
+  trackFill: {
+    height: 3,
   },
 
   // ── States ───────────────────────────────────────────────────────────────────
