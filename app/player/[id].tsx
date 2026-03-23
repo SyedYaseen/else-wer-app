@@ -1,6 +1,3 @@
-// app/player/[id].tsx — Folio Player Screen
-// ⚠️ Logic unchanged from original. L&F only.
-
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -59,22 +56,24 @@ export default function Player() {
         setLoading(true);
         setError(null);
         const bookData = await getBook(bookId);
-        console.log("*** Book", bookData);
+
         if (!bookData) {
           setError(`BookId: ${bookId} not found on db`);
           console.error(`BookId: ${bookId} not found on db`);
           return;
         }
+
         const files = await getFilesForBook(bookId);
-        console.log("*** files", files);
+
         if (!files || files.length === 0) {
           setError(`Missing files for ${bookData?.title}`);
           console.error("Files not in localdb or files not downloaded");
           return;
         }
+
         setCurrentBook(bookData);
         setFiles(files);
-        console.log("Building queue for", bookData.title);
+
         const { q, pos } = await getBookProgress(bookId, files);
         console.log("*** Queue", q);
         setQueue(q);

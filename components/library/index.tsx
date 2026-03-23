@@ -2,7 +2,7 @@
 
 import { fetchBooks, scanServerFiles } from "@/data/api/api";
 import { Audiobook } from "@/data/database/models";
-import { upsertAudiobooks } from "@/data/database/audiobook-repo";
+import { getAllBooks, getLclInProgress, upsertAudiobooks } from "@/data/database/audiobook-repo";
 import {
   FlatList,
   View,
@@ -18,6 +18,7 @@ import BookCard from './book-card';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/components/hooks/useTheme';
+import { listInProgressBooksMergeConflicts } from "@/data/lib/conflict-handling";
 
 const NUM_COLUMNS = 2;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -35,9 +36,18 @@ function Library() {
   const [scanning, setScanning] = useState(false);
 
   async function getBooks() {
-    const res = await fetchBooks();
-    setBooks(res.books);
-    await upsertAudiobooks(res.books);
+    const preScannedBooks = await getAllBooks()
+    if (preScannedBooks && preScannedBooks.length > 0) {
+      setBooks(preScannedBooks)
+    } else {
+      const res = await fetchBooks();
+      setBooks(res.books);
+      await upsertAudiobooks(res.books);
+    }
+  }
+
+  async function getBooksInProgress() {
+    await listInProgressBooksMergeConflicts()
   }
 
   async function scanBooks() {
@@ -63,7 +73,7 @@ function Library() {
     }
   }
 
-  useEffect(() => { getBooks(); }, []);
+  useEffect(() => { getBooks(); getBooksInProgress(); }, []);
 
   // ── Shared page header (title + subtitle row) ─────────────────────────────
   const PageHeader = (

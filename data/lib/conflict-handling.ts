@@ -1,6 +1,7 @@
-import { getBookProgressServer, getFileProgressServer } from "../api/api";
+import { getBookProgressServer, getFileProgressServer, listInProgressServer, saveProgressServer } from "../api/api";
+import { getLclInProgress } from "../database/audiobook-repo";
 import { FileRow, ProgressRow } from "../database/models";
-import { getFileProgressLcl, getProgressForBookLcl } from "../database/sync-repo";
+import { getFileProgressLcl, getProgressForBookLcl, setFileProgressLcl } from "../database/sync-repo";
 
 export interface BookProgressResult {
   q: FileRow[];
@@ -105,5 +106,39 @@ export async function getFileProgress(bookId: number, fileId: number) {
   } catch (e) {
     console.error(e)
     return 0
+  }
+}
+
+export async function listInProgressBooksMergeConflicts() {
+  try {
+    const serverProgress = await listInProgressServer();   // ProgressRow[]
+    const localProgress = await getLclInProgress();      // ProgressRow[] (no join)
+
+    const serverMap = new Map(serverProgress.map(p => [p.book_id, p]));
+    const localMap = new Map(localProgress.map(p => [p.book_id, p]));
+    const allBookIds = new Set([...serverMap.keys(), ...localMap.keys()]) as Set<number>
+
+    for (const book_id of allBookIds) {
+      const server = serverMap.get(book_id) as ProgressRow;
+      const local = localMap.get(book_id) as ProgressRow;
+      if (server && local) {
+        const serverWins = new Date(server.updated_at).getTime() > new Date(local.updated_at).getTime();
+        if (serverWins) {
+          await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
+        } else {
+          await saveProgressServer(book_id, local.file_id, local.progress_ms, local.complete);
+        }
+      } else if (local && !server) {
+        await saveProgressServer(book_id, local.file_id, local.progress_ms, local.complete);
+      } else if (server && !local) {
+        await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
+      }
+    }
+
+    // // Now just fetch the final merged book list from local
+    // return await getLclBooksInProgress();  // Audiobook[] ready for UI
+  }
+  catch (ex) {
+    console.error("Failed", ex)
   }
 }

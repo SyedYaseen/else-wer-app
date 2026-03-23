@@ -23,7 +23,8 @@ import { useTheme, Theme } from '@/components/hooks/useTheme';
 
 const SERVERS = [
   'http://192.168.1.10:3000',
-  'http://172.20.10.2:3000',
+  // 'http://172.20.10.2:3000',
+  'http://192.168.1.4:3000',
 ];
 
 const CREDS = [

@@ -1,5 +1,5 @@
 import { getDb } from "./initdb";
-import { Audiobook, FileRow } from "./models";
+import { Audiobook, FileRow, ProgressRow } from "./models";
 
 
 export async function upsertAudiobook(book: Audiobook) {
@@ -191,3 +191,11 @@ export async function deleteAllRows() {
   `);
 }
 
+export async function getLclInProgress() {
+  const db = await getDb()
+  return await db.getAllAsync<ProgressRow>(`
+    SELECT book_id, file_id, progress_ms, complete, updated_at FROM progress
+    WHERE complete = false
+    ORDER BY updated_at DESC;
+    `)
+}

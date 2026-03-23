@@ -128,7 +128,7 @@ export async function saveProgressServer(
       book_id: bookId,
       file_id: fileId,
       progress_ms: Math.floor(position),
-      complete: complete,
+      complete: Boolean(complete),
     })
 
     console.log("Prog body", body)
@@ -150,6 +150,16 @@ export async function saveProgressServer(
     console.error("Err updating progressToServer", e)
     throw e
   }
+}
+
+export async function listInProgressServer() {
+  const res = await apiFetch(
+    "/list_inprogress"
+  )
+
+  if (!res.ok) return [] as ProgressRow[]
+
+  return await res.json()
 }
 
 export async function getFileProgressServer(bookId: number, fileId: number) {

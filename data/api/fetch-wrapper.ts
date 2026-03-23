@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const excludedPaths = ['/api/login', '/api/create_user'];
 
 export async function apiFetch(url: string, options: RequestInit = {}) {
+    // TODO: Complete refresh token impl and retry fetch
     const token = await AsyncStorage.getItem('token')
     let baseUrl = await AsyncStorage.getItem('server')
     const shouldExclude = excludedPaths.some(path => url.includes(path));
@@ -12,6 +13,8 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
         ...(token && !shouldExclude ? { Authorization: `Bearer ${token}` } : {}),
         'Content-Type': 'application/json',
     };
+
+    // console.log(headers)
 
     return fetch(`${baseUrl}${url}`, {
         ...options,
