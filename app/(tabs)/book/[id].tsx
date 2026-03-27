@@ -1,7 +1,7 @@
 // app/book/[id].tsx — Folio Book Details
 import LoadingSpinner from '@/components/common/loading-spinner';
 import { fetchFileMetaFromServer, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
-import { deleteBookDb, getAllBooks, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
+import { deleteBookDb, getLocalBooks, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';

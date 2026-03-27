@@ -46,8 +46,6 @@ export async function getBookProgress(
 
     const recentUpdate = new Date(lclRecentUpdate.updated_at) > new Date(srvRecentUpdate.updated_at) ? lclRecentUpdate : srvRecentUpdate
 
-
-
     // console.log("===== Conflcit block =====")
     // console.log(lclpos.book_id)
     // console.log("lcl file", lclpos.file_id, lclpos.complete ? "complete" : "pending", formatTime(lclpos.progress_ms), lclpos.updated_at, "\n\n")
@@ -111,29 +109,40 @@ export async function getFileProgress(bookId: number, fileId: number) {
 
 export async function listInProgressBooksMergeConflicts() {
   try {
+    console.log("This that")
     const serverProgress = await getServerInProgress();
+    console.log("Srv prog: == ", serverProgress)
     const localProgress = await getLclInProgress();
+    console.log("Lcl prog: == ", localProgress)
 
     const serverMap = new Map(serverProgress.map(p => [p.book_id, p]));
     const localMap = new Map(localProgress.map(p => [p.book_id, p]));
     const allBookIds = new Set([...serverMap.keys(), ...localMap.keys()]) as Set<number>
 
     for (const book_id of allBookIds) {
-      const server = serverMap.get(book_id) as ProgressRow;
-      const local = localMap.get(book_id) as ProgressRow;
-      if (server && local) {
-        const serverWins = new Date(server.updated_at).getTime() > new Date(local.updated_at).getTime();
-        if (serverWins) {
-          await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
-        } else {
+      try {
+        const server = serverMap.get(book_id) as ProgressRow;
+        const local = localMap.get(book_id) as ProgressRow;
+
+        if (server && local) {
+          const serverWins = new Date(server.updated_at).getTime() > new Date(local.updated_at).getTime();
+          if (serverWins) {
+            await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
+          } else {
+            await saveProgressServer(book_id, local.file_id, local.progress_ms, local.complete);
+          }
+        } else if (local && !server) {
           await saveProgressServer(book_id, local.file_id, local.progress_ms, local.complete);
+        } else if (server && !local) {
+          await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
         }
-      } else if (local && !server) {
-        await saveProgressServer(book_id, local.file_id, local.progress_ms, local.complete);
-      } else if (server && !local) {
-        await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
+      } catch (bookErr) {
+        console.warn(`Merge failed for book ${book_id}, skipping`, bookErr);
+        // continue to next book_id
       }
     }
+
+
 
     return await getInprogressBooks();
   }

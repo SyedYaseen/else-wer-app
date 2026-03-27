@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { getAllBooks, getBook, getFilesForBook } from '@/data/database/audiobook-repo';
+import { getLocalBooks, getBook, getFilesForBook } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import Controls from '@/components/player/controls';
 import BookInfo from '@/components/player/book-info';
@@ -123,7 +123,7 @@ export default function Player() {
         <Text style={[styles.stateText, { color: T.inkSubtle }]}>Book not found.</Text>
         <TouchableOpacity onPress={async () => {
           console.log("Get all books");
-          try { console.log(await getAllBooks()); } catch (e) { console.log(e); }
+          try { console.log(await getLocalBooks()); } catch (e) { console.log(e); }
         }}>
           <MaterialIcons name='download' size={40} color={T.inkSubtle} />
         </TouchableOpacity>

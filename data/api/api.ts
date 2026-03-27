@@ -33,7 +33,7 @@ export async function scanServerFiles() {
 }
 
 
-export async function fetchBooks() {
+export async function getServerBooks() {
   // await scanServerFiles()
   const res = await apiFetch("/list_books")
   if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -142,24 +142,27 @@ export async function saveProgressServer(
     // Add this debug log:
     console.log("Server response status:", response.status);
     if (!response.ok) {
-      const errorData = await response.json()
-      console.error("Server error:", errorData)
-      throw new Error(`Server returned ${response.status}`)
+      // const errorData = await response.json()
+      console.error("Server error")
     }
   } catch (e) {
     console.error("Err updating progressToServer", e)
-    throw e
   }
 }
 
 export async function getServerInProgress() {
-  const res = await apiFetch(
-    "/list_inprogress"
-  )
+  try {
+    const res = await apiFetch(
+      "/list_inprogress"
+    )
 
-  if (!res.ok) return [] as ProgressRow[]
+    if (!res.ok) return [] as ProgressRow[]
 
-  return await res.json()
+    return await res.json()
+  }
+  catch {
+    return [] as ProgressRow[]
+  }
 }
 
 export async function getFileProgressServer(bookId: number, fileId: number) {
