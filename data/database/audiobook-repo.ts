@@ -1,3 +1,4 @@
+import { Directory, Paths } from "expo-file-system";
 import { getDb } from "./initdb";
 import { Audiobook, FileRow, ProgressRow } from "./models";
 
@@ -158,10 +159,22 @@ export async function getBook(bookId: number): Promise<Audiobook | null> {
 
 export async function getFilesForBook(bookId: number): Promise<FileRow[]> {
   const db = await getDb();
-  return db.getAllAsync<FileRow>(
+  const dbFileRows = await db.getAllAsync<FileRow>(
     `SELECT * FROM files WHERE book_id = ? ORDER BY file_name ASC`,
     [bookId]
   );
+
+  if (dbFileRows.length === 0) return [] as FileRow[]
+
+  const bookDir = new Directory(Paths.join(Paths.document, "audiobooks", bookId.toString()))
+  const fsPaths = bookDir.exists ? new Set<string>(bookDir.list().map(b => b.uri)) : new Set<string>()
+
+  const verified = dbFileRows.filter(row => {
+    if (!row.local_path) return false
+    return fsPaths.has(row.local_path)
+  })
+
+  return verified as FileRow[]
 }
 
 export async function getAllFiles(): Promise<FileRow[]> {
@@ -170,7 +183,6 @@ export async function getAllFiles(): Promise<FileRow[]> {
     `SELECT * FROM files ORDER BY file_name ASC`
   );
 }
-
 
 export async function getFile(fileId: number): Promise<FileRow | null> {
   const db = await getDb();

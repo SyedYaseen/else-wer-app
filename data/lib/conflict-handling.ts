@@ -1,7 +1,8 @@
-import { getBookProgressServer, getFileProgressServer, getServerInProgress, saveProgressServer } from "../api/api";
+import { useNetworkState } from "@/components/store/network-store";
+import { getBookProgressServer, getFileProgressServer, getServerInProgress, saveProgress, saveProgressServer } from "../api/api";
 import { getInprogressBooks, getLclInProgress } from "../database/audiobook-repo";
 import { FileRow, ProgressRow } from "../database/models";
-import { getFileProgressLcl, getProgressForBookLcl, setFileProgressLcl } from "../database/sync-repo";
+import { getFileProgressLcl, getProgressForBookLcl, saveProgressLcl } from "../database/sync-repo";
 
 export interface BookProgressResult {
   q: FileRow[];
@@ -23,18 +24,9 @@ export async function getBookProgress(
 
   if (lclCompleteCount === files.length || srvrCompleteCount === files.length) {
     // TODO: Fix logic incase of single file books. E.g Children of Ruin
+    // Add a start over button that would remove all rows from progress? But make sure it foesnt affect listening stats
     console.log("Book was marked complete. Starting from beginnig")
     return { q, pos }
-  }
-
-  // If only one of the sources have progress for file
-  if ((progressLcl.length === 0 && progressServer.length !== 0) || (progressLcl.length !== 0 && progressServer.length === 0)) {
-    const validUpdate = progressLcl.length === 0 ? progressServer : progressLcl
-
-    // get recent update
-    const recentUpdate = findRecentUpdate(validUpdate)
-
-    return getQms(recentUpdate, files)
   }
 
   // Find most recent updateon - from all files
@@ -46,17 +38,15 @@ export async function getBookProgress(
 
     const recentUpdate = new Date(lclRecentUpdate.updated_at) > new Date(srvRecentUpdate.updated_at) ? lclRecentUpdate : srvRecentUpdate
 
-    // console.log("===== Conflcit block =====")
-    // console.log(lclpos.book_id)
-    // console.log("lcl file", lclpos.file_id, lclpos.complete ? "complete" : "pending", formatTime(lclpos.progress_ms), lclpos.updated_at, "\n\n")
-    // console.log("srv file", srvrPos.file_id, srvrPos.complete ? "complete" : "pending", formatTime(srvrPos.progress_ms), srvrPos.updated_at, "\n\n")
-    // console.log("rec file", recentPos.file_id, recentPos.complete ? "complete" : "pending", formatTime(recentPos.progress_ms), recentPos.updated_at, "\n\n")
-    // // console.log("rec", recentPos, new Date(lclpos.updated_at), new Date(srvrPos.updated_at), new Date(lclpos.updated_at) > new Date(srvrPos.updated_at))
-    // console.log("Latest pos", formatTime(pos))
-    // console.log("===== Conflcit block end =====")
+    return getQms(recentUpdate, files)
+  }
+
+  // If only one of the sources have progress for file
+  if (progressLcl.length > 0 || progressServer.length > 0) {
+    const validUpdate = progressLcl.length === 0 ? progressServer : progressLcl
+    const recentUpdate = findRecentUpdate(validUpdate)
 
     return getQms(recentUpdate, files)
-
   }
 
   return { q, pos }
@@ -107,34 +97,51 @@ export async function getFileProgress(bookId: number, fileId: number) {
   }
 }
 
+function createProgressMap(progress: ProgressRow[]) {
+  const progressMap = new Map<number, ProgressRow[]>()
+  progress.forEach(p => {
+    if (!progressMap.has(p.book_id)) {
+      progressMap.set(p.book_id, [p])
+    } else {
+      progressMap.get(p.book_id)!.push(p)
+    }
+  })
+  return progressMap
+}
+
 export async function listInProgressBooksMergeConflicts() {
   try {
-    console.log("This that")
     const serverProgress = await getServerInProgress();
-    console.log("Srv prog: == ", serverProgress)
     const localProgress = await getLclInProgress();
-    console.log("Lcl prog: == ", localProgress)
 
-    const serverMap = new Map(serverProgress.map(p => [p.book_id, p]));
-    const localMap = new Map(localProgress.map(p => [p.book_id, p]));
+    const serverMap = createProgressMap(serverProgress)
+    const localMap = createProgressMap(localProgress)
     const allBookIds = new Set([...serverMap.keys(), ...localMap.keys()]) as Set<number>
 
     for (const book_id of allBookIds) {
       try {
-        const server = serverMap.get(book_id) as ProgressRow;
-        const local = localMap.get(book_id) as ProgressRow;
+        const server = serverMap.get(book_id);
+        const local = localMap.get(book_id);
 
         if (server && local) {
-          const serverWins = new Date(server.updated_at).getTime() > new Date(local.updated_at).getTime();
-          if (serverWins) {
-            await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
-          } else {
-            await saveProgressServer(book_id, local.file_id, local.progress_ms, local.complete);
+          const lclRecentUpdate = findRecentUpdate(local)
+          const srvRecentUpdate = findRecentUpdate(server)
+
+          let recentUpdate: ProgressRow;
+
+          if (new Date(lclRecentUpdate.updated_at) > new Date(srvRecentUpdate.updated_at)) {
+            recentUpdate = lclRecentUpdate
+            await saveProgressServer(book_id, recentUpdate.file_id, recentUpdate.progress_ms, recentUpdate.complete)
+          } else if (new Date(lclRecentUpdate.updated_at) < new Date(srvRecentUpdate.updated_at)) {
+            recentUpdate = srvRecentUpdate
+            await saveProgressLcl(book_id, recentUpdate.file_id, recentUpdate.progress_ms, recentUpdate.complete);
           }
-        } else if (local && !server) {
-          await saveProgressServer(book_id, local.file_id, local.progress_ms, local.complete);
         } else if (server && !local) {
-          await setFileProgressLcl(book_id, server.file_id, server.progress_ms, server.complete);
+          const recentUpdate = findRecentUpdate(server)
+          await saveProgressLcl(book_id, recentUpdate.file_id, recentUpdate.progress_ms, recentUpdate.complete);
+        } else if (!server && local) {
+          const recentUpdate = findRecentUpdate(local)
+          await saveProgressServer(book_id, recentUpdate.file_id, recentUpdate.progress_ms, recentUpdate.complete);
         }
       } catch (bookErr) {
         console.warn(`Merge failed for book ${book_id}, skipping`, bookErr);
@@ -142,11 +149,10 @@ export async function listInProgressBooksMergeConflicts() {
       }
     }
 
-
-
     return await getInprogressBooks();
   }
   catch (ex) {
     console.error("Failed", ex)
   }
 }
+

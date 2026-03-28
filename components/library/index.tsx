@@ -22,7 +22,6 @@ import { listInProgressBooksMergeConflicts } from "@/data/lib/conflict-handling"
 import { Link } from "expo-router";
 import { useAudioPlayerStore } from "../store/audio-player-store";
 import { useNetworkState } from "../store/network-store";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "@/data/api/fetch-wrapper";
 
 const NUM_COLUMNS = 2;
@@ -58,8 +57,11 @@ function Library() {
   }
 
   async function getBooksInProgress() {
-    const inprogress = await listInProgressBooksMergeConflicts()
+    let inprogress = await listInProgressBooksMergeConflicts()
     if (inprogress && inprogress.length > 0) {
+      if (!isOnline) {
+        inprogress.filter(b => b.downloaded)
+      }
       setinProgressBooks(inprogress)
     }
   }

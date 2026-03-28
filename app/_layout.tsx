@@ -1,5 +1,5 @@
 // app/_layout.tsx — Folio Root Layout
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
 import { Stack, usePathname, useRouter } from 'expo-router';
@@ -102,6 +102,7 @@ function RootLayoutNav() {
   const [checking, setChecking] = useState(true);
   const isOnline = useNetworkState(s => s.isOnline);
   const setServer = useAudioPlayerStore(s => s.setServer);
+  const [queryClient] = useState(() => new QueryClient());
 
   useInitPlayer();
 
@@ -178,7 +179,9 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider>
-      <ThemedStack />
+      <QueryClientProvider client={queryClient}>
+        <ThemedStack />
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

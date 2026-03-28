@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from "expo-file-system";
 import { ProgressRow } from '../database/models';
-import { setFileProgressLcl } from '../database/sync-repo';
+import { saveProgressLcl } from '../database/sync-repo';
 import { formatTime } from '@/utils/formatTime';
 import { apiFetch } from './fetch-wrapper';
 import { Directory } from 'expo-file-system';
+import { useNetworkState } from '@/components/store/network-store';
 
 // user login
 export async function login(server: string, username: string, password: string) {
@@ -98,11 +99,13 @@ export const saveProgress = async (
   progress_ms: number,
   complete: boolean,
 ) => {
+  const isOnline = useNetworkState.getState().isOnline;
   try {
-    await Promise.all([
-      setFileProgressLcl(bookId, fileId, progress_ms, complete),
-      saveProgressServer(bookId, fileId, progress_ms, complete),
-    ]);
+    const tasks = [saveProgressLcl(bookId, fileId, progress_ms, complete)]
+    if (isOnline) tasks.push(saveProgressServer(bookId, fileId, progress_ms, complete))
+
+    await Promise.all(tasks);
+
     console.log(
       "Saved progress",
       bookId,
@@ -112,8 +115,6 @@ export const saveProgress = async (
     );
   } catch (error) {
     console.error("Failed to save progress:", error);
-    // Optionally rethrow if the caller should handle it
-    throw error;
   }
 }
 
@@ -123,6 +124,9 @@ export async function saveProgressServer(
   position: number,
   complete: boolean
 ) {
+  const isOnline = useNetworkState.getState().isOnline;
+  if (!isOnline) return
+
   try {
     const body = JSON.stringify({
       book_id: bookId,
@@ -131,18 +135,13 @@ export async function saveProgressServer(
       complete: Boolean(complete),
     })
 
-    console.log("Prog body", body)
-
     const response = await apiFetch("/update_progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body
     })
 
-    // Add this debug log:
-    console.log("Server response status:", response.status);
     if (!response.ok) {
-      // const errorData = await response.json()
       console.error("Server error")
     }
   } catch (e) {
@@ -151,6 +150,8 @@ export async function saveProgressServer(
 }
 
 export async function getServerInProgress() {
+  const isOnline = useNetworkState.getState().isOnline;
+  if (!isOnline) return [] as ProgressRow[]
   try {
     const res = await apiFetch(
       "/list_inprogress"
@@ -166,6 +167,9 @@ export async function getServerInProgress() {
 }
 
 export async function getFileProgressServer(bookId: number, fileId: number) {
+  const isOnline = useNetworkState.getState().isOnline;
+  if (!isOnline) return 0
+
   const res = await apiFetch(
     `/get_file_progress/${bookId}/${fileId}`
   );
@@ -175,6 +179,9 @@ export async function getFileProgressServer(bookId: number, fileId: number) {
 }
 
 export async function getBookProgressServer(bookId: number) {
+  const isOnline = useNetworkState.getState().isOnline;
+  if (!isOnline) return [] as ProgressRow[]
+
   const res = await apiFetch(
     `/get_book_progress/${bookId}`
   );
