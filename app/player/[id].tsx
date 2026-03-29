@@ -12,121 +12,104 @@ import { getBookProgress } from '@/data/lib/conflict-handling';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/components/hooks/useTheme';
+import { useQuery } from '@tanstack/react-query';
+import { Audiobook, FileRow } from '@/data/database/models';
+
+async function loadBookData(bookId: number) {
+  const audiobook = await getBook(bookId);
+  if (!audiobook) throw new Error(`Book ${bookId} not found`);
+
+  const files = await getFilesForBook(bookId);
+  if (!files || files.length === 0) {
+    const err = new Error(`Missing files for "${audiobook.title}"`);
+    (err as any).noFiles = true;
+    throw err;
+  }
+
+  const { q, pos } = await getBookProgress(bookId, files);
+  return { audiobook, files, q, pos };
+}
 
 export default function Player() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const bookId = parseInt(id);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<null | string>(null);
-  const player = useAudioPlayerStore(s => s.player);
-  useProgressUpdate(player!);
+  const T = useTheme();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
 
+  const player = useAudioPlayerStore(s => s.player);
   const currentBook = useAudioPlayerStore(s => s.currentBook);
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook);
   const setFiles = useAudioPlayerStore(s => s.setFiles);
   const setQueue = useAudioPlayerStore(s => s.setQueue);
   const queue = useAudioPlayerStore(s => s.queue);
 
-  // L&F
-  const T = useTheme();
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
+  useProgressUpdate(player!);
+
+  const shouldFetch = !!player && !!bookId && (!currentBook || currentBook.id !== bookId);
+
+  const { isLoading, error, data } = useQuery({
+    queryKey: ['player-book', bookId],
+    queryFn: async () => {
+      // Save progress for the previously playing book before switching
+      if (currentBook && !!queue && queue?.length > 0) {
+        await saveProgress(
+          currentBook.id as number,
+          queue[0].id as number,
+          player!.currentTime * 1000,
+          player!.currentTime > player!.duration - 3,
+        );
+      }
+      return loadBookData(bookId);
+    },
+    enabled: shouldFetch,
+  });
+
+  useEffect(() => {
+    if (!error) return;
+    if ((error as any).noFiles) {
+      router.replace(`/book/${bookId}`);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (!data || !player) return;
+    setCurrentBook(data.audiobook);
+    setFiles(data.files);
+    setQueue(data.q);
+    const next = data.q[0];
+    if (next?.local_path) {
+      player.replace(next.local_path);
+      player.seekTo(data.pos / 1000);
+      player.play();
+    }
+  }, [data]);
 
   if (!player) return null;
 
-  useEffect(() => {
-    const savePreviousBookProgress = async () => {
-      if (queue && queue.length > 0) {
-        await saveProgress(
-          currentBook?.id as number,
-          queue[0].id as number,
-          player?.currentTime * 1000,
-          player.currentTime > player.duration - 3,
-        );
-      }
-    };
 
-    const loadBook = async () => {
-      if (!bookId) {
-        setError("Invalid book ID");
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        setError(null);
-        const bookData = await getBook(bookId);
+  const containerStyle = [styles.container, { backgroundColor: T.background, paddingTop: insets.top }];
 
-        if (!bookData) {
-          setError(`BookId: ${bookId} not found on db`);
-          console.error(`BookId: ${bookId} not found on db`);
-          return;
-        }
-
-        const files = await getFilesForBook(bookId);
-
-        if (!files || files.length === 0) {
-          setError(`Missing files for ${bookData?.title}`);
-          console.error("Files not in localdb or files not downloaded");
-          return;
-        }
-
-        setCurrentBook(bookData);
-        setFiles(files);
-
-        const { q, pos } = await getBookProgress(bookId, files);
-        console.log("*** Queue", q);
-        setQueue(q);
-        const next = q[0];
-        console.log("next in q: ", next);
-        if (next?.local_path) {
-          player?.replace(next.local_path);
-          player.seekTo(pos / 1000);
-          player?.play();
-        }
-      } catch (err) {
-        console.error("Error loading book:", err);
-        setError("Failed to load book data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (currentBook && currentBook.id !== bookId) savePreviousBookProgress();
-    if (!currentBook || currentBook.id !== bookId) {
-      console.log("*** Loading new book: ", bookId);
-      loadBook();
-    }
-  }, [bookId]);
-
-  // ── States ──────────────────────────────────────────────────────────────────
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: T.background, paddingTop: insets.top }]}>
+      <View style={containerStyle}>
         <Text style={[styles.stateText, { color: T.inkSubtle }]}>Loading…</Text>
       </View>
     );
   }
 
-  if (error) {
+  if (error && !(error as any).noFiles) {
     return (
-      <View style={[styles.container, { backgroundColor: T.background, paddingTop: insets.top }]}>
-        <Text style={[styles.stateText, { color: T.danger }]}>{error}</Text>
+      <View style={containerStyle}>
+        <Text style={[styles.stateText, { color: T.danger }]}>{(error as Error).message}</Text>
       </View>
     );
   }
 
   if (!currentBook) {
     return (
-      <View style={[styles.container, { backgroundColor: T.background, paddingTop: insets.top }]}>
+      <View style={containerStyle}>
         <Text style={[styles.stateText, { color: T.inkSubtle }]}>Book not found.</Text>
-        <TouchableOpacity onPress={async () => {
-          console.log("Get all books");
-          try { console.log(await getLocalBooks()); } catch (e) { console.log(e); }
-        }}>
-          <MaterialIcons name='download' size={40} color={T.inkSubtle} />
-        </TouchableOpacity>
       </View>
     );
   }
