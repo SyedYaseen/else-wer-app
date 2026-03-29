@@ -167,12 +167,19 @@ export async function getFilesForBook(bookId: number): Promise<FileRow[]> {
   if (dbFileRows.length === 0) return [] as FileRow[]
 
   const bookDir = new Directory(Paths.join(Paths.document, "audiobooks", bookId.toString()))
-  const fsPaths = bookDir.exists ? new Set<string>(bookDir.list().map(b => b.uri)) : new Set<string>()
+  const fsPaths = bookDir.exists
+    ? new Set<string>(bookDir.list().map(b => decodeURIComponent(b.uri)))
+    : new Set<string>()
+
+  console.log("file paths files *** ", fsPaths)
+  console.log("db file rows *** ", dbFileRows)
 
   const verified = dbFileRows.filter(row => {
     if (!row.local_path) return false
-    return fsPaths.has(row.local_path)
+    return fsPaths.has(decodeURIComponent(row.local_path))
   })
+
+  console.log("verified files *** ", verified)
 
   return verified as FileRow[]
 }
