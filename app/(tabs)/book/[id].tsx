@@ -24,7 +24,7 @@ type BookParams = {
 };
 
 export default function BookDetails() {
-  const { id, title, author } = useLocalSearchParams<BookParams>();
+  const { id, title: titleParam, author: authorParam } = useLocalSearchParams<BookParams>();
   const bookId = parseInt(id);
   // const [book, setBook] = useState<Audiobook>();
   const router = useRouter();
@@ -145,8 +145,8 @@ export default function BookDetails() {
         {/* Title + actions row */}
         <View style={[styles.header, { borderBottomColor: T.inkHairline }]}>
           <View style={styles.titleContainer}>
-            <Text style={[styles.titleText, { color: T.ink }]}>{title}</Text>
-            <Text style={[styles.authorText, { color: T.inkMuted }]}>{author}</Text>
+            <Text style={[styles.titleText, { color: T.ink }]}>{book?.title ?? titleParam ?? ""}</Text>
+            <Text style={[styles.authorText, { color: T.inkMuted }]}>{book?.author ?? authorParam ?? ""}</Text>
           </View>
           <View style={styles.actions}>
             {isDownloading && (
