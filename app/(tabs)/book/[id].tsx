@@ -56,7 +56,7 @@ export default function BookDetails() {
   const isDownloaded = useMemo(() => {
     if (!files || files.length === 0) return false;
     return files.every(f => f.local_path && new File(f.local_path).exists);
-  }, [files]);
+  }, [files, downloadProgress]);
 
   const isDownloading = useMemo(() => {
     if (!downloadProgress) return false;
@@ -159,7 +159,7 @@ export default function BookDetails() {
               <MaterialIcons name='download' size={32} color={T.accent} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handlePlay} disabled={!isDownloaded} >
+            <TouchableOpacity onPress={handlePlay} disabled={!isDownloaded}>
               <MaterialIcons name='play-circle' size={32} color={T.accent} />
             </TouchableOpacity>
 
