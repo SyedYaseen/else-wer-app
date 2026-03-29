@@ -1,5 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
-import { subscribeWithSelector } from "zustand/middleware"
+import { persist, createJSONStorage, subscribeWithSelector } from "zustand/middleware"
 export type DownloadManagerApi = {
   enqueue: (item: { bookId: number; fileId: number; fileName?: string }) => Promise<string | null>
   startQueue?: () => Promise<void>
@@ -22,7 +23,7 @@ export type DownloadItem = {
   error?: string | null
 }
 
-interface BookProgressData {
+export interface BookProgressData {
   totalSize: number;         // e.g., the total file size in bytes
   currentProgress: number;   // e.g., the current position in bytes
 }
@@ -34,7 +35,9 @@ export interface DownloadState {
   items: Record<string, DownloadItem>
   downloadManager?: DownloadManagerApi | null
   bookProgress: BookProgress
-  setBookProgress: (bookId: number, totalSize?: number) => void
+  setBookSz: (bookId: number, totalSize?: number) => void
+  resetDownload: (bookId: number) => void,
+  clearAllDownloads: () => void,
   addToQueue: (payload: { bookId: number, fileId: number, fileName: string, fileSize: number }) => void
   setProgress: (bookId: number, fileId: number, progress: number) => void,
   setManagerRef: (m: DownloadManagerApi) => void
@@ -43,83 +46,132 @@ export interface DownloadState {
   setLocalPath: (bookId: number, fileId: number, path: string) => void
 }
 
-export const useDownloadStore = create<DownloadState>()(subscribeWithSelector((set, get) => ({
-  queue: [],
-  items: {},
-  progress: null,
-  bookProgress: {},
-  downloadManager: null,
-  addToQueue: ({ bookId, fileId, fileName, fileSize, author, title }) => set((s) => {
-    const key = `${bookId}_${fileId}`
-    if (s.items[key]) return s
-    const item: DownloadItem = {
-      bookId,
-      fileId,
-      fileName,
-      fileSize,
-      author,
-      title,
-      status: 'pending',
-      progress: 0,
-      localPath: undefined,
-      error: null,
-    }
-    return { queue: [...s.queue, item], items: { ...s.items, [key]: item } }
-  }),
+export const useDownloadStore = create<DownloadState>()(subscribeWithSelector(
 
-  setProgress: (bookId, fileId, progress) =>
-    set((s) => {
+  persist((set, get) => ({
+    queue: [],
+    items: {},
+    progress: null,
+    bookProgress: {},
+    downloadManager: null,
+    addToQueue: ({ bookId, fileId, fileName, fileSize, author, title }) => set((s) => {
       const key = `${bookId}_${fileId}`
-      const item = s.items[key]
-      if (!item) return s
-
-      const bookProg = s.bookProgress
-      if (bookProg[bookId] && progress) {
-        bookProg[bookId].currentProgress += progress
+      if (s.items[key]) return s
+      const item: DownloadItem = {
+        bookId,
+        fileId,
+        fileName,
+        fileSize,
+        author,
+        title,
+        status: 'pending',
+        progress: 0,
+        localPath: undefined,
+        error: null,
       }
-
-      const updated = { ...item, progress: item.progress + progress }
-      return { items: { ...s.items, [key]: updated }, bookProgress: bookProg }
+      return { queue: [...s.queue, item], items: { ...s.items, [key]: item } }
     }),
 
-  setBookProgress: (bookId, totalSize) => set((s: DownloadState) => {
-    if (!bookId) return s.bookProgress
-    const bookProg = s.bookProgress
+    setProgress: (bookId, fileId, progress) =>
+      set((s) => {
+        const key = `${bookId}_${fileId}`;
+        const item = s.items[key];
+        if (!item) return s;
 
-    if (totalSize) {
-      bookProg[bookId] = { totalSize, currentProgress: 0 };
-    }
+        const updatedItems = {
+          ...s.items,
+          [key]: { ...item, progress: item.progress + progress }, // absolute, not accumulated
+        };
 
-    return { bookProgress: bookProg }
-  }),
+        const overallBookProgress = {
+          ...s.bookProgress,
+          [bookId]: { ...s.bookProgress[bookId], currentProgress: (s.bookProgress[bookId].currentProgress ?? 0) + progress }
+        }
 
-  setManagerRef: (m) => set(() => ({ downloadManager: m })),
+        return {
+          items: updatedItems,
+          bookProgress: overallBookProgress
+        };
+      }),
 
-  setStatus: (bookId, fileId, status, err = null) =>
-    set((s) => {
-      const key = `${bookId}_${fileId}`
-      const item = s.items[key]
-      if (!item) return s
+    setBookSz: (bookId, totalSize) => set((s) => {
+      if (!bookId) return s;
+      if (!totalSize) return s;
 
-      const updated = { ...item, status, error: err }
-      return { items: { ...s.items, [key]: updated } }
+      return {
+        bookProgress: {
+          ...s.bookProgress,
+          [bookId]: { currentProgress: 0, totalSize }
+        }
+      };
     }),
 
-  setLocalPath: (bookId, fileId, path) =>
-    set((s) => {
-      const key = `${bookId}_${fileId}`
-      const item = s.items[key]
-      if (!item) return s
-      const updated = { ...item, localPath: path }
-      return { items: { ...s.items, [key]: updated } }
+    resetDownload: (bookId) => set((s) => {
+      if (!bookId) return s;
+
+      const key = `${bookId}_`;
+      const updatedItems = { ...s.items }
+
+      Object.keys(s.items).forEach(k => {
+        if (k.startsWith(key)) {
+          delete updatedItems[k]
+        }
+      })
+
+      const updatedBookProgress = { ...s.bookProgress }
+      delete updatedBookProgress[bookId]
+
+      return {
+        items: updatedItems,
+        bookProgress: updatedBookProgress
+      };
     }),
 
-  startDownload: async (payload) => {
-    const store = get()
-    const m = store.downloadManager
-    if (!m) throw new Error('Download manager not initialized')
-    // enqueue + let manager handle processing
-    store.addToQueue({ ...payload })
-    return m.enqueue(payload)
-  },
-})))
+    clearAllDownloads: () => set((s) => {
+      return {
+        queue: [],
+        items: {},
+        bookProgress: {}
+      };
+    }),
+
+    setManagerRef: (m) => set(() => ({ downloadManager: m })),
+
+    setStatus: (bookId, fileId, status, err = null) =>
+      set((s) => {
+        const key = `${bookId}_${fileId}`
+        const item = s.items[key]
+        if (!item) return s
+
+        const updated = { ...item, status, error: err }
+        return { items: { ...s.items, [key]: updated } }
+      }),
+
+    setLocalPath: (bookId, fileId, path) =>
+      set((s) => {
+        const key = `${bookId}_${fileId}`
+        const item = s.items[key]
+        if (!item) return s
+        const updated = { ...item, localPath: path }
+        return { items: { ...s.items, [key]: updated } }
+      }),
+
+    startDownload: async (payload) => {
+      const store = get()
+      const m = store.downloadManager
+      if (!m) throw new Error('Download manager not initialized')
+      // enqueue + let manager handle processing
+      store.addToQueue({ ...payload })
+      return m.enqueue(payload)
+    },
+  }), {
+    name: "download-store-v1",
+    storage: createJSONStorage(() => AsyncStorage),
+    // Don't persist the manager ref — it's a class instance
+    partialize: (state) => ({
+      items: state.items,
+      bookProgress: state.bookProgress,
+      queue: state.queue,
+    }),
+  })
+))

@@ -4,18 +4,19 @@ import { fetchFileMetaFromServer, removeLocalBook as removeDownloadedBook } from
 import { deleteBookDb, getLocalBooks, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Audiobook, FileRow } from '@/data/database/models';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDownloadStore } from '@/components/store/download-strore';
-import { Paths } from 'expo-file-system';
+import { Directory, Paths } from 'expo-file-system';
 import Progress from '@/components/downloads/progress';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/components/hooks/useTheme';
-
+import { File } from 'expo-file-system';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 type BookParams = {
   id: string;
   title: string;
@@ -25,16 +26,14 @@ type BookParams = {
 export default function BookDetails() {
   const { id, title, author } = useLocalSearchParams<BookParams>();
   const bookId = parseInt(id);
-  const [book, setBook] = useState<Audiobook>();
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isDownloaded, setIsDownloaded] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<null | string>(null);
+  // const [book, setBook] = useState<Audiobook>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const startDownload = useDownloadStore((s) => s.startDownload);
-  const bookProgress = useDownloadStore((s) => s.bookProgress);
-  const setBookProgress = useDownloadStore((s) => s.setBookProgress);
+  const downloadProgress = useDownloadStore((s) => s.bookProgress[bookId]);
+  const setBookSz = useDownloadStore((s) => s.setBookSz);
+  const resetDownload = useDownloadStore((s) => s.resetDownload);
   const server = useAudioPlayerStore((s) => s.server);
   const setServer = useAudioPlayerStore((s) => s.setServer);
 
@@ -42,6 +41,30 @@ export default function BookDetails() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
 
+  // GetData
+  const { data: book, isLoading: isBookLoading, error: bookErr } = useQuery({
+    queryKey: ['bookRows', bookId],
+    queryFn: () => getBook(bookId),
+  });
+
+  const { data: files, isLoading: isFilesLoading, error: filesErr } = useQuery({
+    queryKey: ['files', bookId],
+    queryFn: () => getFilesForBook(bookId),
+  });
+
+  // DerivedState
+  const isDownloaded = useMemo(() => {
+    if (!files || files.length === 0) return false;
+    return files.every(f => f.local_path && new File(f.local_path).exists);
+  }, [files]);
+
+  const isDownloading = useMemo(() => {
+    if (!downloadProgress) return false;
+    return downloadProgress.currentProgress > 0 &&
+      downloadProgress.currentProgress < downloadProgress.totalSize;
+  }, [downloadProgress]);
+
+  // TODO: Is this server setting necessary? Currently pulls cover art from server, refactor later to avoid this
   useEffect(() => {
     if (!server) {
       (async () => {
@@ -51,39 +74,8 @@ export default function BookDetails() {
     }
   }, [server]);
 
-  // Load book - Do not use global state. Use that only for player
-  useEffect(() => {
-    getBook(bookId).then(b => {
-      if (b) {
-        setBook(b);
-
-        const currBookProg = bookProgress[bookId];
-        if (!currBookProg) {
-          setBookProgress(bookId, b?.book_size);
-        } else {
-          if (currBookProg.currentProgress < currBookProg.totalSize) {
-            setIsDownloading(true);
-          }
-        }
-      }
-    });
-
-    getFilesForBook(bookId).then(res => {
-      if (res.length > 0) {
-        setIsDownloaded(true);
-        setIsDownloading(false);
-      }
-    });
-  }, [bookId]);
-
   const handleDownload = async () => {
-    try {
-      // await handleDelete()
-    } catch (Err) {
-      console.warn("Failed to delete book");
-    }
-
-    setIsDownloading(true);
+    setBookSz(bookId, book?.book_size)
     const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId);
 
     for (const f of fileRows) {
@@ -93,22 +85,21 @@ export default function BookDetails() {
 
     await upsertFiles(fileRows);
 
-    try {
-      markBookDownloaded(bookId, Paths.join(Paths.document, "audiobooks", bookId.toString()).toString());
-      setIsDownloaded(true);
-    } catch (err) {
-      console.error(`Failed to download ${bookId}:`, err);
-    } finally {
-      setIsDownloading(false);
-    }
+    markBookDownloaded(
+      bookId,
+      Paths.join(Paths.document, 'audiobooks', bookId.toString())
+    );
+
+    queryClient.invalidateQueries({ queryKey: ['files', bookId] });
   };
 
   const handleDelete = async () => {
     try {
       await deleteBookDb(bookId);
       await removeDownloadedBook(bookId);
-      setBookProgress(bookId, book?.book_size);
-      setIsDownloaded(false);
+      resetDownload(bookId);
+
+      queryClient.invalidateQueries({ queryKey: ['files', bookId] });
     } catch (err) {
       console.error(`Failed to delete ${bookId}:`, err);
     }
@@ -118,7 +109,9 @@ export default function BookDetails() {
     router.push(`/player/${id}`);
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // if (isBookLoading || isFilesLoading) {
+  //   return <LoadingSpinner />;
+  // }
 
   return (
     <>
@@ -160,21 +153,20 @@ export default function BookDetails() {
               <Progress bookId={bookId} />
             )}
 
-            {!isDownloaded && !isDownloading &&
-              <TouchableOpacity onPress={handleDownload}>
-                <MaterialIcons name='download' size={32} color={T.accent} />
-              </TouchableOpacity>
-            }
-            {!isDownloading && isDownloaded &&
-              <TouchableOpacity onPress={handlePlay}>
-                <MaterialIcons name='play-circle' size={32} color={T.accent} />
-              </TouchableOpacity>
-            }
-            {isDownloaded &&
-              <TouchableOpacity onPress={handleDelete}>
-                <MaterialIcons name='delete' size={32} color={T.danger} />
-              </TouchableOpacity>
-            }
+            <TouchableOpacity onPress={handleDownload}
+              disabled={isDownloaded || isDownloading}
+            >
+              <MaterialIcons name='download' size={32} color={T.accent} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handlePlay} disabled={!isDownloaded} >
+              <MaterialIcons name='play-circle' size={32} color={T.accent} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleDelete} disabled={!isDownloaded}>
+              <MaterialIcons name='delete' size={32} color={T.danger} />
+            </TouchableOpacity>
+
           </View>
         </View>
 
