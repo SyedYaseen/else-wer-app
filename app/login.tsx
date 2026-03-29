@@ -21,17 +21,15 @@ import { useTheme, Theme } from '@/components/hooks/useTheme';
 
 const SERVERS = [
   'http://192.168.1.10:3000',
-  // 'http://172.20.10.2:3000',
   'http://192.168.1.4:3000',
 ];
 
 const CREDS = [
   { username: 'admin', password: 'admin' },
-  { username: 'valerie', password: 'mypassword' },
+  { username: 'pappu', password: 'pappu' },
 ];
 
 // ── Stateless input row ───────────────────────────────────────────────────────
-// No useState here — all values and callbacks come from the parent.
 
 type InputRowProps = {
   label: string;
@@ -41,7 +39,6 @@ type InputRowProps = {
   secureTextEntry?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  // password reveal toggle — only supplied for the password field
   showPassword?: boolean;
   onToggleShow?: () => void;
   T: Theme;
@@ -92,7 +89,6 @@ export default function Login() {
   const router = useRouter();
   const setServerStore = useAudioPlayerStore(s => s.setServer);
 
-  // Form state — all at the top level, no state in children
   const [server, setServer] = useState(SERVERS[0]);
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin');
@@ -122,9 +118,12 @@ export default function Login() {
     setLoading(true);
     try {
       const data = await login(server, username, password);
+
       await AsyncStorage.setItem('token', data.token);
       await AsyncStorage.setItem('server', server + '/api');
       setServerStore(server + '/api');
+      // useAuthGate will pick up the new token and redirect automatically,
+      // but an explicit replace is fine too and feels snappier.
       router.replace('/');
     } catch (err: any) {
       console.error('Failed to connect:', server, err);
@@ -147,10 +146,7 @@ export default function Login() {
 
         {/* ── Wordmark ── */}
         <View style={styles.header}>
-          <Text style={[styles.wordmark, { color: T.ink }]}>Folio</Text>
-          <Text style={[styles.tagline, { color: T.inkSubtle }]}>
-            Sign in to your library
-          </Text>
+          <Text style={[styles.wordmark, { color: T.ink }]}>Else Wer</Text>
         </View>
 
         {/* ── Form card ── */}
@@ -189,7 +185,6 @@ export default function Login() {
             T={T}
           />
 
-          {/* Inline error */}
           {error ? (
             <View style={[
               styles.errorBox,
@@ -200,7 +195,6 @@ export default function Login() {
             </View>
           ) : null}
 
-          {/* Sign in button */}
           <Pressable
             onPress={handleLogin}
             disabled={loading}
@@ -211,7 +205,6 @@ export default function Login() {
               : <Text style={[styles.loginBtnText, { color: T.background }]}>Sign in</Text>
             }
           </Pressable>
-
         </View>
 
         {/* ── Dev toggles ── */}
@@ -252,7 +245,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 48,
   },
-
   header: {
     alignItems: 'center',
     marginBottom: 40,
@@ -263,18 +255,12 @@ const styles = StyleSheet.create({
     lineHeight: 56,
     marginBottom: 8,
   },
-  tagline: {
-    fontFamily: 'DMSans_300Light',
-    fontSize: 14,
-  },
-
   card: {
     borderRadius: 20,
     borderWidth: 0.5,
     padding: 24,
     gap: 16,
   },
-
   fieldGroup: { gap: 6 },
   fieldLabel: {
     fontFamily: 'DMSans_500Medium',
@@ -297,10 +283,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'DMSans_400Regular',
     fontSize: 14,
-    // height: '100%' removed — causes layout jank on Android
     paddingVertical: 0,
   },
-
   errorBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -316,7 +300,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
-
   loginBtn: {
     height: 50,
     borderRadius: 10,
@@ -328,7 +311,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 0.02,
   },
-
   devSection: {
     marginTop: 32,
     alignItems: 'center',

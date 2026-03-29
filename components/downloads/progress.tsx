@@ -12,12 +12,11 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function Progress({ bookId }: { bookId: number }) {
   const T = useTheme();
-  const bookProgress = useDownloadStore(s => s.bookProgress);
-  const curr = bookProgress[bookId];
+  const bookProgress = useDownloadStore(s => s.bookProgress[bookId]);
 
-  if (!curr) return null;
+  if (!bookProgress) return null;
 
-  const pcnt = Math.min((curr.currentProgress / curr.totalSize) * 100, 100);
+  const pcnt = Math.min((bookProgress.currentProgress / bookProgress.totalSize) * 100, 100);
   const strokeDashoffset = CIRCUMFERENCE - (pcnt / 100) * CIRCUMFERENCE;
 
   return (

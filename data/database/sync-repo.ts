@@ -1,8 +1,7 @@
 import { getDb } from "./initdb";
 import { ProgressRow } from "./models";
 
-
-export async function setFileProgressLcl(bookId: number, fileId: number, progressMs: number, complete: boolean) {
+export async function saveProgressLcl(bookId: number, fileId: number, progressMs: number, complete: boolean) {
     const db = await getDb();
     try {
         await db.runAsync(

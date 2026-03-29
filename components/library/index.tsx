@@ -1,6 +1,6 @@
-import { fetchBooks, scanServerFiles } from "@/data/api/api";
+import { getServerBooks, scanServerFiles } from "@/data/api/api";
 import { Audiobook } from "@/data/database/models";
-import { AudiobookWithProgress, getAllBooks, getLclInProgress, upsertAudiobooks } from "@/data/database/audiobook-repo";
+import { AudiobookWithProgress, getLocalBooks, getLclInProgress, upsertAudiobooks, getDownloadedBooks } from "@/data/database/audiobook-repo";
 import {
   FlatList,
   View,
@@ -10,7 +10,8 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Image
+  Image,
+  Alert
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BookCard from './book-card';
@@ -20,6 +21,8 @@ import { useTheme } from '@/components/hooks/useTheme';
 import { listInProgressBooksMergeConflicts } from "@/data/lib/conflict-handling";
 import { Link } from "expo-router";
 import { useAudioPlayerStore } from "../store/audio-player-store";
+import { useNetworkState } from "../store/network-store";
+import { apiFetch } from "@/data/api/fetch-wrapper";
 
 const NUM_COLUMNS = 2;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -37,26 +40,33 @@ function Library() {
   const [refreshing, setRefreshing] = useState(false);
   const [scanning, setScanning] = useState(false);
 
+  const [pinging, setPinging] = useState(false);
+  const setNetworkState = useNetworkState(s => s.setNetworkState);
+  const isOnline = useNetworkState(s => s.isOnline)
 
   async function getBooks() {
-    const preScannedBooks = await getAllBooks()
-    if (preScannedBooks && preScannedBooks.length > 0) {
-      setBooks(preScannedBooks)
+    if (!isOnline) {
+      const localBooks = await getDownloadedBooks()
+      console.log("Downloaded books from DB:", localBooks.length, localBooks.map(b => b.title));
+      setBooks(localBooks);
     } else {
-      const res = await fetchBooks();
+      const res = await getServerBooks();
       setBooks(res.books);
       await upsertAudiobooks(res.books);
     }
   }
 
   async function getBooksInProgress() {
-    const inprogress = await listInProgressBooksMergeConflicts()
+    let inprogress = await listInProgressBooksMergeConflicts()
     if (inprogress && inprogress.length > 0) {
+      if (!isOnline) {
+        inprogress.filter(b => b.downloaded)
+      }
       setinProgressBooks(inprogress)
     }
   }
 
-  async function scanBooks() {
+  async function scanServerBooks() {
     setScanning(true);
     try {
       await scanServerFiles();
@@ -79,7 +89,41 @@ function Library() {
     }
   }
 
-  useEffect(() => { getBooks(); getBooksInProgress(); }, []);
+  useEffect(() => {
+    getBooks();
+    getBooksInProgress();
+  }, [isOnline]);
+
+  const handleNetworkToggle = async () => {
+    if (isOnline) {
+      // Going offline — no ping needed
+      setNetworkState(false);
+      return;
+    }
+
+    // Going online — ping first
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    setPinging(true);
+    try {
+      const res = await apiFetch("/hello", {
+        method: 'GET',
+        signal: controller.signal,
+      });
+
+      if (res.ok || res.status === 404) {
+        // 404 means server responded — /ping may not exist yet, that's fine
+        setNetworkState(true);
+      } else {
+        Alert.alert('Unreachable', 'Could not connect to the server.');
+      }
+    } catch {
+      Alert.alert('Unreachable', 'Could not connect to the server.');
+    } finally {
+      setPinging(false);
+      clearTimeout(timeoutId);
+    }
+  };
 
   // ── Shared page header (title + subtitle row) ─────────────────────────────
   const PageHeader = (
@@ -99,17 +143,54 @@ function Library() {
             Your audiobook collection
           </Text>
         </View>
-        {books.length > 0 && (
+
+        {/* ── Right-side buttons ── */}
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+
+          {/* Rescan — online only */}
+          {isOnline && books.length > 0 && (
+            <TouchableOpacity
+              style={[styles.rescanBtn, { borderColor: T.inkHairline }]}
+              onPress={scanServerBooks}
+              activeOpacity={0.6}
+            >
+              <MaterialIcons name="refresh" size={14} color={T.accent} />
+              <Text style={[styles.rescanBtnText, { color: T.accent }]}>Rescan</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Network toggle */}
           <TouchableOpacity
-            style={[styles.rescanBtn, { borderColor: T.inkHairline }]}
-            onPress={scanBooks}
+            style={[
+              styles.rescanBtn,
+              {
+                borderColor: isOnline ? T.inkHairline : T.accent + '66',
+                backgroundColor: isOnline ? 'transparent' : T.accent + '14',
+              },
+            ]}
+            onPress={handleNetworkToggle}
             activeOpacity={0.6}
+            disabled={pinging}
           >
-            <MaterialIcons name="refresh" size={14} color={T.accent} />
-            <Text style={[styles.rescanBtnText, { color: T.accent }]}>Rescan</Text>
+            {pinging
+              ? <ActivityIndicator size={12} color={T.accent} />
+              : <MaterialIcons
+                name={isOnline ? 'cloud-off' : 'cloud-queue'}
+                size={14}
+                color={isOnline ? T.inkSubtle : T.accent}
+              />
+            }
+            <Text style={[
+              styles.rescanBtnText,
+              { color: isOnline ? T.inkSubtle : T.accent },
+            ]}>
+              {pinging ? 'Checking…' : isOnline ? 'Go Offline' : 'Go Online'}
+            </Text>
           </TouchableOpacity>
-        )}
+
+        </View>
       </View>
+
       {books.length > 0 && (
         <Text style={[styles.countText, { color: T.inkSubtle }]}>
           {books.length} {books.length === 1 ? 'audiobook' : 'audiobooks'}
@@ -147,7 +228,7 @@ function Library() {
           </Text>
           <TouchableOpacity
             style={[styles.scanBtn, { backgroundColor: T.ink }]}
-            onPress={scanBooks}
+            onPress={scanServerBooks}
             activeOpacity={0.75}
           >
             <MaterialIcons name="search" size={18} color={T.background} />

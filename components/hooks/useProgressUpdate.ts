@@ -49,7 +49,7 @@ export function useProgressUpdate(player: AudioPlayer) {
             }
         }
 
-        if (sec % 31 === 0) {
+        if (sec % 11 === 0) {
             lastAutoProgressSaveRef.current = sec;
             isSavingRef.current = true
             console.log("Saving progress at", sec);

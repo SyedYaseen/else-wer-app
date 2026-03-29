@@ -14,7 +14,7 @@ import {
 import { useState } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { fetchBooks, logout, removeAllLocalBooks, scanServerFiles } from '@/data/api/api';
+import { getServerBooks, logout, removeAllLocalBooks, scanServerFiles } from '@/data/api/api';
 import { resetDb } from '@/data/database/utils';
 import { upsertAudiobooks } from '@/data/database/audiobook-repo';
 import { useTheme, useThemeToggle, Theme, ColorMode } from '@/components/hooks/useTheme';
@@ -175,7 +175,7 @@ export default function MenuTab() {
         text: 'Sync',
         onPress: async () => {
           await scanServerFiles();
-          const books = await fetchBooks();
+          const books = await getServerBooks();
           await upsertAudiobooks(books.books);
         },
       },
