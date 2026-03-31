@@ -101,10 +101,9 @@ export const saveProgress = async (
 ) => {
   const isOnline = useNetworkState.getState().isOnline;
   try {
-    const tasks = [saveProgressLcl(bookId, fileId, progress_ms, complete)]
-    if (isOnline) tasks.push(saveProgressServer(bookId, fileId, progress_ms, complete))
 
-    await Promise.all(tasks);
+    await saveProgressLcl(bookId, fileId, progress_ms, complete)
+    if (isOnline) await saveProgressServer(bookId, fileId, progress_ms, complete)
 
     console.log(
       "Saved progress",

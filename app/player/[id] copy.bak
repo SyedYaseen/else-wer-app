@@ -50,27 +50,34 @@ export default function Player() {
 
   const { isLoading, error, data } = useQuery({
     queryKey: ['player-book', bookId],
-    queryFn: () => loadBookData(bookId), // pure fetch, no side effects
+    queryFn: async () => {
+      if (currentBook && queue?.length > 0) {
+        await saveProgress(
+          currentBook.id as number,
+          queue[0].id as number,
+          player!.currentTime * 1000,
+          player!.currentTime > player!.duration - 3,
+        );
+      }
+      return loadBookData(bookId);
+    },
     enabled: shouldFetch,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 0,        // always re-fetch on mount
+    gcTime: 0,           // don't serve cached pos to a re-mount
     refetchOnMount: true,
   });
 
   useEffect(() => {
-    if (!data || !player) return;
-    if (didSeekRef.current) return;
-    didSeekRef.current = true;
-
-    // Save progress for previous book only when genuinely switching books
-    if (currentBook && currentBook.id !== bookId && queue?.length > 0) {
-      saveProgress(
-        currentBook.id as number,
-        queue[0].id as number,
-        player.currentTime * 1000,
-        player.currentTime > player.duration - 3,
-      ).catch(err => console.error('[Player] save-on-switch failed', err));
+    if (!error) return;
+    if ((error as any).noFiles) {
+      router.replace(`/book/${bookId}`);
     }
+  }, [error]);
+
+  useEffect(() => {
+    if (!data || !player) return;
+    if (didSeekRef.current) return; // guard against re-renders after initial seek
+    didSeekRef.current = true;
 
     setCurrentBook(data.audiobook);
     setFiles(data.files);

@@ -1,6 +1,3 @@
-import { getServerBooks, scanServerFiles } from "@/data/api/api";
-import { Audiobook } from "@/data/database/models";
-import { AudiobookWithProgress, getLocalBooks, getLclInProgress, upsertAudiobooks, getDownloadedBooks } from "@/data/database/audiobook-repo";
 import {
   FlatList,
   View,
@@ -10,22 +7,25 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
-  Alert
+  Alert,
 } from "react-native";
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BookCard from './book-card';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useState, useEffect } from 'react';
-import { useTheme } from '@/components/hooks/useTheme';
-import { listInProgressBooksMergeConflicts } from "@/data/lib/conflict-handling";
-import { Link } from "expo-router";
-import { useAudioPlayerStore } from "../store/audio-player-store";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "@/components/hooks/useTheme";
+import { scanServerFiles } from "@/data/api/api";
+import BookCard from "./book-card";
+import { SearchBar } from "./searchbar";
 import { useNetworkState } from "../store/network-store";
-import { apiFetch } from "@/data/api/fetch-wrapper";
+import { useBookSearch } from "../hooks/useBooksSearch";
+import { useLibraryBooks, useInProgressBooks, LIBRARY_KEYS } from "../hooks/useLibraryBooks";
+import { InProgressRow } from "./inprogress-row";
+import { LibraryHeader } from "./library-header";
+
+const TAG = "[Library]";
 
 const NUM_COLUMNS = 2;
-const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_WIDTH = Dimensions.get("window").width;
 const H_PADDING = 16;
 const COL_GAP = 10;
 export const ITEM_WIDTH =
@@ -33,177 +33,101 @@ export const ITEM_WIDTH =
 
 function Library() {
   const T = useTheme();
-  const insets = useSafeAreaInsets();
-
-  const [books, setBooks] = useState<Audiobook[]>([]);
-  const [inProgressbooks, setinProgressBooks] = useState<AudiobookWithProgress[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const isOnline = useNetworkState(s => s.isOnline);
   const [scanning, setScanning] = useState(false);
 
-  const [pinging, setPinging] = useState(false);
-  const setNetworkState = useNetworkState(s => s.setNetworkState);
-  const isOnline = useNetworkState(s => s.isOnline)
+  // ── Data ────────────────────────────────────────────────────────────────────
+  const {
+    data: books = [],
+    isLoading: booksLoading,
+    isError: booksError,
+    error: booksErrorDetail,
+    refetch: refetchBooks,
+    isRefetching,
+  } = useLibraryBooks();
 
-  async function getBooks() {
-    if (!isOnline) {
-      const localBooks = await getDownloadedBooks()
-      console.log("Downloaded books from DB:", localBooks.length, localBooks.map(b => b.title));
-      setBooks(localBooks);
-    } else {
-      const res = await getServerBooks();
-      setBooks(res.books);
-      await upsertAudiobooks(res.books);
-    }
-  }
+  const {
+    data: inProgressBooks = [],
+    isError: inProgressError,
+    refetch: refetchInProgress,
+  } = useInProgressBooks();
 
-  async function getBooksInProgress() {
-    let inprogress = await listInProgressBooksMergeConflicts()
-    if (inprogress && inprogress.length > 0) {
-      if (!isOnline) {
-        inprogress.filter(b => b.downloaded)
-      }
-      setinProgressBooks(inprogress)
-    }
-  }
+  // ── Search ──────────────────────────────────────────────────────────────────
+  const { query, setQuery, debouncedQuery, filtered, hasQuery } = useBookSearch(books);
 
-  async function scanServerBooks() {
+  // ── Actions ─────────────────────────────────────────────────────────────────
+  async function handleRescan() {
     setScanning(true);
     try {
+      console.log(`${TAG} starting server rescan`);
       await scanServerFiles();
-      await getBooks();
+      await queryClient.invalidateQueries({ queryKey: LIBRARY_KEYS.books(isOnline) });
+      console.log(`${TAG} rescan complete`);
     } catch (err) {
-      console.error('Error scanning books:', err);
+      console.error(`${TAG} rescan failed`, err);
+      Alert.alert("Scan Failed", "Could not scan for audiobooks. Check your server connection.");
     } finally {
       setScanning(false);
     }
   }
 
-  async function onRefresh() {
-    setRefreshing(true);
+  async function handleRefresh() {
+    console.log(`${TAG} pull-to-refresh`);
     try {
-      await getBooks();
+      await Promise.all([refetchBooks(), refetchInProgress()]);
     } catch (err) {
-      console.error('Error refreshing books:', err);
-    } finally {
-      setRefreshing(false);
+      // Individual query errors are already logged inside the queryFn.
+      // React Query surfaces them via isError; we only need to handle
+      // unexpected rejections from Promise.all itself here.
+      console.error(`${TAG} refresh threw outside queryFn`, err);
     }
   }
 
-  useEffect(() => {
-    getBooks();
-    getBooksInProgress();
-  }, [isOnline]);
+  // ── States ───────────────────────────────────────────────────────────────────
 
-  const handleNetworkToggle = async () => {
-    if (isOnline) {
-      // Going offline — no ping needed
-      setNetworkState(false);
-      return;
-    }
-
-    // Going online — ping first
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    setPinging(true);
-    try {
-      const res = await apiFetch("/hello", {
-        method: 'GET',
-        signal: controller.signal,
-      });
-
-      if (res.ok || res.status === 404) {
-        // 404 means server responded — /ping may not exist yet, that's fine
-        setNetworkState(true);
-      } else {
-        Alert.alert('Unreachable', 'Could not connect to the server.');
-      }
-    } catch {
-      Alert.alert('Unreachable', 'Could not connect to the server.');
-    } finally {
-      setPinging(false);
-      clearTimeout(timeoutId);
-    }
-  };
-
-  // ── Shared page header (title + subtitle row) ─────────────────────────────
-  const PageHeader = (
-    <View style={[
-      styles.pageHeader,
-      {
-        paddingTop: insets.top + 16,
-        paddingHorizontal: H_PADDING,
-        borderBottomColor: T.inkHairline,
-        backgroundColor: T.background,
-      },
-    ]}>
-      <View style={styles.pageTitleRow}>
-        <View>
-          <Text style={[styles.pageTitle, { color: T.ink }]}>Library</Text>
-          <Text style={[styles.pageSubtitle, { color: T.inkSubtle }]}>
-            Your audiobook collection
+  // Hard fetch error with no cached data to fall back on
+  if (booksError && !books.length) {
+    console.error(`${TAG} rendering error state`, booksErrorDetail);
+    return (
+      <View style={[styles.root, { backgroundColor: T.background }]}>
+        <LibraryHeader bookCount={0} onRescan={handleRescan} isRescanning={scanning} />
+        <View style={styles.centreState}>
+          <MaterialIcons name="cloud-off" size={52} color={T.inkHairline} />
+          <Text style={[styles.stateTitle, { color: T.ink }]}>Couldn't load library</Text>
+          <Text style={[styles.stateBody, { color: T.inkSubtle }]}>
+            {isOnline
+              ? "Check your server connection and try again."
+              : "No downloaded books found for offline mode."}
           </Text>
-        </View>
-
-        {/* ── Right-side buttons ── */}
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-
-          {/* Rescan — online only */}
-          {isOnline && books.length > 0 && (
-            <TouchableOpacity
-              style={[styles.rescanBtn, { borderColor: T.inkHairline }]}
-              onPress={scanServerBooks}
-              activeOpacity={0.6}
-            >
-              <MaterialIcons name="refresh" size={14} color={T.accent} />
-              <Text style={[styles.rescanBtnText, { color: T.accent }]}>Rescan</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Network toggle */}
           <TouchableOpacity
-            style={[
-              styles.rescanBtn,
-              {
-                borderColor: isOnline ? T.inkHairline : T.accent + '66',
-                backgroundColor: isOnline ? 'transparent' : T.accent + '14',
-              },
-            ]}
-            onPress={handleNetworkToggle}
-            activeOpacity={0.6}
-            disabled={pinging}
+            style={[styles.scanBtn, { backgroundColor: T.ink }]}
+            onPress={() => refetchBooks()}
+            activeOpacity={0.75}
           >
-            {pinging
-              ? <ActivityIndicator size={12} color={T.accent} />
-              : <MaterialIcons
-                name={isOnline ? 'cloud-off' : 'cloud-queue'}
-                size={14}
-                color={isOnline ? T.inkSubtle : T.accent}
-              />
-            }
-            <Text style={[
-              styles.rescanBtnText,
-              { color: isOnline ? T.inkSubtle : T.accent },
-            ]}>
-              {pinging ? 'Checking…' : isOnline ? 'Go Offline' : 'Go Online'}
-            </Text>
+            <MaterialIcons name="refresh" size={18} color={T.background} />
+            <Text style={[styles.scanBtnText, { color: T.background }]}>Try Again</Text>
           </TouchableOpacity>
-
         </View>
       </View>
+    );
+  }
 
-      {books.length > 0 && (
-        <Text style={[styles.countText, { color: T.inkSubtle }]}>
-          {books.length} {books.length === 1 ? 'audiobook' : 'audiobooks'}
-        </Text>
-      )}
-    </View>
-  );
+  if (booksLoading && !books.length) {
+    return (
+      <View style={[styles.root, { backgroundColor: T.background }]}>
+        <LibraryHeader bookCount={0} onRescan={handleRescan} isRescanning={scanning} />
+        <View style={styles.centreState}>
+          <ActivityIndicator size="large" color={T.accent} />
+        </View>
+      </View>
+    );
+  }
 
-  // ── Scanning ──────────────────────────────────────────────────────────────
   if (scanning) {
     return (
       <View style={[styles.root, { backgroundColor: T.background }]}>
-        {PageHeader}
+        <LibraryHeader bookCount={books.length} onRescan={handleRescan} isRescanning={scanning} />
         <View style={styles.centreState}>
           <ActivityIndicator size="large" color={T.accent} />
           <Text style={[styles.stateTitle, { color: T.ink }]}>Scanning library</Text>
@@ -215,11 +139,10 @@ function Library() {
     );
   }
 
-  // ── Empty ─────────────────────────────────────────────────────────────────
   if (books.length === 0) {
     return (
       <View style={[styles.root, { backgroundColor: T.background }]}>
-        {PageHeader}
+        <LibraryHeader bookCount={0} onRescan={handleRescan} isRescanning={scanning} />
         <View style={styles.centreState}>
           <MaterialIcons name="library-books" size={52} color={T.inkHairline} />
           <Text style={[styles.stateTitle, { color: T.ink }]}>No audiobooks yet</Text>
@@ -228,7 +151,7 @@ function Library() {
           </Text>
           <TouchableOpacity
             style={[styles.scanBtn, { backgroundColor: T.ink }]}
-            onPress={scanServerBooks}
+            onPress={handleRescan}
             activeOpacity={0.75}
           >
             <MaterialIcons name="search" size={18} color={T.background} />
@@ -244,9 +167,9 @@ function Library() {
   // ── Grid ──────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.root, { backgroundColor: T.background }]}>
-      {PageHeader}
+      <LibraryHeader bookCount={books.length} onRescan={handleRescan} isRescanning={scanning} />
       <FlatList
-        data={books}
+        data={filtered}
         keyExtractor={book => book?.id?.toString()}
         renderItem={({ item }) => (
           <View style={styles.itemContainer}>
@@ -254,14 +177,38 @@ function Library() {
           </View>
         )}
         numColumns={NUM_COLUMNS}
-        ListHeaderComponent={<InProgressRow books={inProgressbooks} />}
+        ListHeaderComponent={
+          <View style={styles.listHeader}>
+            {/* Only show in-progress row when NOT searching */}
+            {!hasQuery && !inProgressError && (
+              <InProgressRow books={inProgressBooks} searchQuery={debouncedQuery} />
+            )}
+            <SearchBar
+              value={query}
+              onChange={setQuery}
+              resultCount={filtered.length}
+              hasQuery={hasQuery}
+              style={styles.searchBar}
+            />
+          </View>
+        }
+        ListEmptyComponent={
+          hasQuery ? (
+            <View style={styles.emptySearch}>
+              <Text style={[styles.stateTitle, { color: T.ink }]}>No results</Text>
+              <Text style={[styles.stateBody, { color: T.inkSubtle }]}>
+                Try searching by title, author, or series
+              </Text>
+            </View>
+          ) : null
+        }
         contentContainerStyle={[styles.listContent, { paddingHorizontal: H_PADDING }]}
-        columnWrapperStyle={styles.columnWrapper}
+        columnWrapperStyle={filtered.length > 0 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+            refreshing={isRefetching}
+            onRefresh={handleRefresh}
             tintColor={T.accent}
             colors={[T.accent]}
           />
@@ -271,156 +218,44 @@ function Library() {
   );
 }
 
-function InProgressRow({ books }: { books: AudiobookWithProgress[] }) {
-  const T = useTheme();
-  if (!books.length) return null;
-
-  return (
-    <View>
-      <Text style={[styles.sectionTitle, { color: T.ink }]}>Continue Listening</Text>
-      <FlatList
-        data={books}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={b => b.id.toString()}
-        contentContainerStyle={{ gap: 12, paddingRight: H_PADDING, paddingBottom: 25 }}
-        renderItem={({ item }) => <InProgressCard book={item} />}
-      />
-    </View>
-  );
-}
-
-function InProgressCard({ book }: { book: AudiobookWithProgress }) {
-  const T = useTheme();
-  const server = useAudioPlayerStore(s => s.server);
-  const progress = book.duration ? book.progress_ms / book.duration : 0;
-  const CARD_WIDTH = 100;
-  const COVER_HEIGHT = CARD_WIDTH * 1.35;
-
-  return (
-    <Link href={{ pathname: `/player/[id]`, params: { id: book.id, title: book.title, author: book.author } }} asChild>
-      <TouchableOpacity activeOpacity={0.75} style={[styles.inProgressCard, { width: CARD_WIDTH, backgroundColor: T.surface, borderColor: T.inkHairline }]}>
-        {server && book.cover_art ? (
-          <Image
-            source={{ uri: `${server}${book.cover_art}` }}
-            style={{ width: CARD_WIDTH, height: COVER_HEIGHT }}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={[{ width: CARD_WIDTH, height: COVER_HEIGHT, alignItems: 'center', justifyContent: 'center', backgroundColor: T.surfaceDeep }]}>
-            <Text style={{ fontFamily: 'DMSerifDisplay_400Regular', fontSize: 32, opacity: 0.4, color: T.inkSubtle }}>
-              {book.title?.charAt(0).toUpperCase() ?? '?'}
-            </Text>
-          </View>
-        )}
-        <View style={{ paddingHorizontal: 7, paddingTop: 7, paddingBottom: 4 }}>
-          <Text style={[styles.inProgressTitle, { color: T.ink }]} numberOfLines={2}>
-            {book.title}
-          </Text>
-        </View>
-        <View style={[styles.trackBg, { backgroundColor: T.inkHairline }]}>
-          <View style={[styles.trackFill, { backgroundColor: T.accent, width: `${Math.min(progress * 100, 100)}%` }]} />
-        </View>
-      </TouchableOpacity>
-    </Link>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
-  inProgressTitle: {
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 11,
-    lineHeight: 15,
-    textTransform: 'capitalize',
+  listHeader: {
+    gap: 16,
+    paddingTop: 16,
   },
-
-  // ── Page header ─────────────────────────────────────────────────────────────
-  pageHeader: {
-    paddingBottom: 14,
-    borderBottomWidth: 0.5,
-    gap: 6,
-  },
-  pageTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  pageTitle: {
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 32,
-    lineHeight: 36,
-  },
-  pageSubtitle: {
-    fontFamily: 'DMSans_300Light',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  countText: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 11,
-    letterSpacing: 0.04,
-  },
-  rescanBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 100,
-    borderWidth: 0.5,
-    marginBottom: 2,
-  },
-  rescanBtnText: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 12,
-  },
-  // ── Inprogress ───────────────────────────────────────────────────────────────────
-  sectionTitle: {
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 20,
-    lineHeight: 24,
-    marginBottom: 10
-  },
-  inProgressList: {
-    paddingBottom: 4,
-  },
-  inProgressCard: {
-    borderRadius: 8,
-    borderWidth: 0.5,
-    overflow: 'hidden',
-  },
-  trackBg: {
-    height: 3,
-    width: '100%',
-  },
-  trackFill: {
-    height: 3,
+  searchBar: {
+    marginBottom: 4,
   },
 
   // ── States ───────────────────────────────────────────────────────────────────
   centreState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 40,
     gap: 10,
   },
   stateTitle: {
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: "DMSerifDisplay_400Regular",
     fontSize: 22,
     marginTop: 12,
   },
   stateBody: {
-    fontFamily: 'DMSans_300Light',
+    fontFamily: "DMSans_300Light",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
   },
+  emptySearch: {
+    paddingTop: 60,
+    alignItems: "center",
+    gap: 8,
+  },
   scanBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginTop: 16,
     paddingHorizontal: 22,
@@ -428,13 +263,13 @@ const styles = StyleSheet.create({
     borderRadius: 100,
   },
   scanBtnText: {
-    fontFamily: 'DMSans_500Medium',
+    fontFamily: "DMSans_500Medium",
     fontSize: 14,
   },
 
   // ── Grid ─────────────────────────────────────────────────────────────────────
-  listContent: { paddingTop: 16, paddingBottom: 40 },
-  columnWrapper: { justifyContent: 'space-between', marginBottom: COL_GAP },
+  listContent: { paddingBottom: 40 },
+  columnWrapper: { justifyContent: "space-between", marginBottom: COL_GAP },
   itemContainer: { width: ITEM_WIDTH },
 });
 

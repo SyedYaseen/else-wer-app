@@ -24,7 +24,7 @@ type BookParams = {
 };
 
 export default function BookDetails() {
-  const { id, title, author } = useLocalSearchParams<BookParams>();
+  const { id, title: titleParam, author: authorParam } = useLocalSearchParams<BookParams>();
   const bookId = parseInt(id);
   // const [book, setBook] = useState<Audiobook>();
   const router = useRouter();
@@ -80,7 +80,7 @@ export default function BookDetails() {
 
     for (const f of fileRows) {
       f.local_path = await startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name, fileSize: f.file_size, author: book?.author, title: book?.title });
-      console.log("local path from book details", f);
+      // console.log("local path from book details", f);
     }
 
     await upsertFiles(fileRows);
@@ -145,8 +145,8 @@ export default function BookDetails() {
         {/* Title + actions row */}
         <View style={[styles.header, { borderBottomColor: T.inkHairline }]}>
           <View style={styles.titleContainer}>
-            <Text style={[styles.titleText, { color: T.ink }]}>{title}</Text>
-            <Text style={[styles.authorText, { color: T.inkMuted }]}>{author}</Text>
+            <Text style={[styles.titleText, { color: T.ink }]}>{book?.title ?? titleParam ?? ""}</Text>
+            <Text style={[styles.authorText, { color: T.inkMuted }]}>{book?.author ?? authorParam ?? ""}</Text>
           </View>
           <View style={styles.actions}>
             {isDownloading && (
