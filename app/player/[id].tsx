@@ -111,6 +111,14 @@ export default function Player() {
     if (next?.local_path) {
       player.replace(next.local_path);
       player.seekTo(data.pos / 1000);
+
+      player.setActiveForLockScreen(true, {
+        title: currentBook?.title,
+        artist: currentBook?.author,
+        albumTitle: currentBook?.title,
+        artworkUrl: currentBook?.cover_art ?? undefined, // optional
+      });
+
       player.play();
     }
   }, [data]);

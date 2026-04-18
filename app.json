@@ -48,6 +48,8 @@
       [
         "expo-audio",
         {
+          "enableBackgroundPlayback": true,
+          "enableBackgroundRecording": false,
           "microphonePermission": false
         }
       ],
