@@ -11,7 +11,7 @@ import { useColorScheme } from '@/components/hooks/useColorScheme';
 import { initDb } from '@/data/database/initdb';
 import useInitPlayer from '@/components/hooks/useInitPlayer';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { DownloadManager } from '@/data/lib/download-manager';
 import { useDownloadStore } from '@/components/store/download-strore';
 import { ThemeProvider, useTheme } from '@/components/hooks/useTheme';
@@ -58,6 +58,7 @@ export default function RootLayout() {
 
   if (!loaded) return null;
 
+
   return <RootLayoutNav />;
 }
 
@@ -103,6 +104,7 @@ function RootLayoutNav() {
   const isOnline = useNetworkState(s => s.isOnline);
   const setServer = useAudioPlayerStore(s => s.setServer);
   const [queryClient] = useState(() => new QueryClient());
+
 
   useInitPlayer();
 

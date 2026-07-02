@@ -94,33 +94,37 @@ export default function Player() {
     if (didSeekRef.current) return;
     didSeekRef.current = true;
 
-    // Save progress for the previous book only when genuinely switching books
-    if (currentBook && currentBook.id !== bookId && queue?.length > 0) {
-      saveProgress(
-        currentBook.id as number,
-        queue[0].id as number,
-        player.currentTime * 1000,
-        player.currentTime > player.duration - 3,
-      ).catch(err => console.error(`${TAG} save-on-switch failed`, err));
-    }
+    const applyBook = async () => {
+      if (currentBook && currentBook.id !== bookId && queue && queue?.length > 0) {
+        saveProgress(
+          currentBook.id as number,
+          queue[0].id as number,
+          player.currentTime * 1000,
+          player.currentTime > player.duration - 3,
+        ).catch(err => console.error(`${TAG} save-on-switch failed`, err));
+      }
 
-    setCurrentBook(data.audiobook);
-    setFiles(data.files);
-    setQueue(data.q);
-    const next = data.q[0];
-    if (next?.local_path) {
-      player.replace(next.local_path);
-      player.seekTo(data.pos / 1000);
+      setCurrentBook(data.audiobook);
+      setFiles(data.files);
+      setQueue(data.q);
+
+      const next = data.q[0];
+      if (!next?.local_path) return;
+
+      player.replace(next.local_path);   // wait for the source to actually load
+      await player.seekTo(data.pos / 1000);
 
       player.setActiveForLockScreen(true, {
-        title: currentBook?.title,
-        artist: currentBook?.author,
-        albumTitle: currentBook?.title,
-        artworkUrl: currentBook?.cover_art ?? undefined, // optional
+        title: data.audiobook.title,           // <- data.audiobook, not the stale currentBook
+        artist: data.audiobook.author,
+        albumTitle: data.audiobook.title,
+        artworkUrl: data.audiobook.cover_art ?? undefined,
       });
 
       player.play();
-    }
+    };
+
+    applyBook();
   }, [data]);
 
   useEffect(() => {

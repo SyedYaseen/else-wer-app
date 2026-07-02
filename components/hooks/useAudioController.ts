@@ -56,7 +56,6 @@ export function useAudioController() {
           );
         } else {
           if (player.isLoaded) {
-            console.log("hits here?");
             player.play();
           }
         }
