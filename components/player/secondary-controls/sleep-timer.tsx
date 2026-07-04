@@ -2,9 +2,9 @@
 // ⚠️ Logic unchanged. L&F only.
 
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
-import { useTheme } from '@/components/hooks/useTheme';
+import { Text, StyleSheet } from "react-native";
+import { useTheme } from '@/theme';
+import { IconButton, BottomSheet } from '@/components/ui';
 
 export default function SleepTimerButton() {
     const T = useTheme();
@@ -12,33 +12,16 @@ export default function SleepTimerButton() {
 
     return (
         <>
-            <TouchableOpacity onPress={() => setShow(true)} style={styles.iconButton}>
-                <MaterialIcons name="access-time" size={26} color={T.inkMuted} />
-            </TouchableOpacity>
+            <IconButton icon="access-time" size="xl" tone={T.inkMuted} onPress={() => setShow(true)} />
 
-            <Modal transparent visible={show} animationType="slide">
-                <TouchableOpacity style={styles.overlay} onPress={() => setShow(false)}>
-                    <View style={[styles.bottomSheet, { backgroundColor: T.surface, borderTopColor: T.inkHairline }]}>
-                        <Text style={[styles.sheetTitle, { color: T.ink }]}>Sleep timer</Text>
-                    </View>
-                </TouchableOpacity>
-            </Modal>
+            <BottomSheet visible={show} onClose={() => setShow(false)}>
+                <Text style={[styles.sheetTitle, { color: T.ink }]}>Sleep timer</Text>
+            </BottomSheet>
         </>
     );
 }
 
 const styles = StyleSheet.create({
-    iconButton: { padding: 10, alignItems: 'center' },
-    overlay: { flex: 1 },
-    bottomSheet: {
-        position: 'absolute',
-        bottom: 0,
-        width: '100%',
-        borderTopWidth: 0.5,
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
-        padding: 20,
-    },
     sheetTitle: {
         fontFamily: 'DMSerifDisplay_400Regular',
         fontSize: 18,

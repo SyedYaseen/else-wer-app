@@ -1,20 +1,19 @@
 // app/book/[id].tsx — Folio Book Details
-import LoadingSpinner from '@/components/common/loading-spinner';
+// Built on the shared components/ui primitive layer — see DESIGN_SYSTEM.md.
 import { fetchFileMetaFromServer, removeLocalBook as removeDownloadedBook } from '@/data/api/api';
 import { deleteBookDb, getLocalBooks, getBook, getFilesForBook, markBookDownloaded, upsertFiles } from '@/data/database/audiobook-repo';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Audiobook, FileRow } from '@/data/database/models';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useDownloadStore } from '@/components/store/download-strore';
+import { useDownloadStore } from '@/components/store/download-store';
 import { Directory, Paths } from 'expo-file-system';
-import Progress from '@/components/downloads/progress';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
+import { IconButton, ProgressRing } from '@/components/ui';
 import { File } from 'expo-file-system';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 type BookParams = {
@@ -26,7 +25,6 @@ type BookParams = {
 export default function BookDetails() {
   const { id, title: titleParam, author: authorParam } = useLocalSearchParams<BookParams>();
   const bookId = parseInt(id);
-  // const [book, setBook] = useState<Audiobook>();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -109,10 +107,6 @@ export default function BookDetails() {
     router.push(`/player/${id}`);
   };
 
-  // if (isBookLoading || isFilesLoading) {
-  //   return <LoadingSpinner />;
-  // }
-
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -131,15 +125,12 @@ export default function BookDetails() {
             />
           )}
           {/* Back button overlaid on cover, clears notch */}
-          <TouchableOpacity
-            style={[styles.backBtn, { top: insets.top + 8 }]}
+          <IconButton
+            icon="arrow-back"
+            size="md"
             onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.backBtnPill, { backgroundColor: T.background + 'CC' }]}>
-              <MaterialIcons name="arrow-back" size={18} color={T.ink} />
-            </View>
-          </TouchableOpacity>
+            style={[styles.backBtn, { top: insets.top + 8, backgroundColor: T.background + 'CC' }]}
+          />
         </View>
 
         {/* Title + actions row */}
@@ -149,24 +140,33 @@ export default function BookDetails() {
             <Text style={[styles.authorText, { color: T.inkMuted }]}>{book?.author ?? authorParam ?? ""}</Text>
           </View>
           <View style={styles.actions}>
-            {isDownloading && (
-              <Progress bookId={bookId} />
+            {isDownloading && downloadProgress && (
+              <ProgressRing progress={downloadProgress.currentProgress / downloadProgress.totalSize} />
             )}
 
-            <TouchableOpacity onPress={handleDownload}
+            <IconButton
+              icon="download"
+              size="xxl"
+              tone={T.accent}
+              onPress={handleDownload}
               disabled={isDownloaded || isDownloading}
-            >
-              <MaterialIcons name='download' size={32} color={T.accent} />
-            </TouchableOpacity>
+            />
 
-            <TouchableOpacity onPress={handlePlay} disabled={!isDownloaded}>
-              <MaterialIcons name='play-circle' size={32} color={T.accent} />
-            </TouchableOpacity>
+            <IconButton
+              icon="play-circle"
+              size="xxl"
+              tone={T.accent}
+              onPress={handlePlay}
+              disabled={!isDownloaded}
+            />
 
-            <TouchableOpacity onPress={handleDelete} disabled={!isDownloaded}>
-              <MaterialIcons name='delete' size={32} color={T.danger} />
-            </TouchableOpacity>
-
+            <IconButton
+              icon="delete"
+              size="xxl"
+              tone={T.danger}
+              onPress={handleDelete}
+              disabled={!isDownloaded}
+            />
           </View>
         </View>
 
@@ -204,13 +204,9 @@ const styles = StyleSheet.create({
   backBtn: {
     position: 'absolute',
     left: 16,
-  },
-  backBtnPill: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   // Header row

@@ -1,7 +1,7 @@
 
 import * as FileSystem from 'expo-file-system'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { DownloadItem, useDownloadStore } from '@/components/store/download-strore'
+import { DownloadItem, useDownloadStore } from '@/components/store/download-store'
 import { Paths } from 'expo-file-system';
 import { getBook } from '../database/audiobook-repo';
 

@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, Image, FlatList, StyleSheet } from "react-native";
 import { Link } from "expo-router";
 import { AudiobookWithProgress } from "@/data/database/audiobook-repo";
-import { useTheme } from "@/components/hooks/useTheme";
+import { useTheme } from "@/theme";
 import { useAudioPlayerStore } from "../store/audio-player-store";
 import { HighlightedText } from "./searchbar";
 

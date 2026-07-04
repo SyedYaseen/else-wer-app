@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@/components/hooks/useTheme";
+import { useTheme } from "@/theme";
 import { useNetworkState } from "../store/network-store";
 import { apiFetch } from "@/data/api/fetch-wrapper";
 import { useState } from "react";

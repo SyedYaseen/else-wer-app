@@ -11,7 +11,7 @@ import {
     ViewStyle,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useTheme } from "@/components/hooks/useTheme";
+import { useTheme } from "@/theme";
 
 interface SearchBarProps {
     value: string;

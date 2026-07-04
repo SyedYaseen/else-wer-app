@@ -7,7 +7,7 @@ import { useAudioController } from '../hooks/useAudioController';
 import Seeker from './seeker';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import SecondaryControls from './secondary-controls/secondary-controls';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
 
 export default function Controls() {
     const { player, onPlay, rewind, fastForward } = useAudioController();

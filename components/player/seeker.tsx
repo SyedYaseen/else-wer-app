@@ -6,7 +6,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { formatTime } from '@/utils/formatTime';
 import { AudioPlayer } from 'expo-audio';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
 
 export default function Seeker({ player }: { player: AudioPlayer }) {
     const T = useTheme();

@@ -6,8 +6,8 @@ import { useEffect } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAudioPlayerStore } from "../store/audio-player-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useTheme } from '@/components/hooks/useTheme';
-import { ITEM_WIDTH } from "./index";
+import { useTheme } from '@/theme';
+import { ITEM_WIDTH } from "./layout-constants";
 
 function BookCard({ book }: { book: Audiobook }) {
     const T = useTheme();

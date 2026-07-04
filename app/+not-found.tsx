@@ -1,17 +1,19 @@
+// app/+not-found.tsx — Folio Not Found
 import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { Text, View } from '@/components/Themed';
+import { StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '@/theme';
 
 export default function NotFoundScreen() {
+  const T = useTheme();
+
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>This screen doesn't exist.</Text>
+      <View style={[styles.container, { backgroundColor: T.background }]}>
+        <Text style={[styles.title, { color: T.ink }]}>This screen doesn't exist.</Text>
 
         <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
+          <Text style={[styles.linkText, { color: T.accent }]}>Go to home screen!</Text>
         </Link>
       </View>
     </>
@@ -26,15 +28,15 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
+    fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 20,
-    fontWeight: 'bold',
   },
   link: {
     marginTop: 15,
     paddingVertical: 15,
   },
   linkText: {
+    fontFamily: 'DMSans_400Regular',
     fontSize: 14,
-    color: '#2e78b7',
   },
 });

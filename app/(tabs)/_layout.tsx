@@ -7,7 +7,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useClientOnlyValue } from '@/components/hooks/useClientOnlyValue';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import MiniPlayer from '@/components/player/mini-player';
 
@@ -99,7 +99,7 @@ export default function TabLayout() {
           shadowOpacity: 0,
         } as any,
         headerTitleStyle: {
-          fontFamily: 'DMSerifDisplay_400Regular',
+          fontFamily: T.font.serif.regular,
           fontSize: 20,
           color: T.ink,
         },

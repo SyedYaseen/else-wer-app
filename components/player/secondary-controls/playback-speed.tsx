@@ -4,7 +4,7 @@
 import { useAudioPlayerStore } from "@/components/store/audio-player-store";
 import React, { useState, useRef } from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet, UIManager, findNodeHandle } from "react-native";
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
 
 const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 

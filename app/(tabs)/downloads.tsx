@@ -1,10 +1,11 @@
 // app/(tabs)/downloads.tsx — Folio Downloads Screen
-// All colours sourced from useTheme() — responds to system light / dark mode.
+// Built on the shared components/ui primitive layer — see DESIGN_SYSTEM.md.
 
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { BookProgressData, DownloadItem, useDownloadStore } from '@/components/store/download-strore';
-import { useTheme, Theme } from '@/components/hooks/useTheme';
+import { BookProgressData, DownloadItem, useDownloadStore } from '@/components/store/download-store';
+import { useTheme, Theme } from '@/theme';
+import { Card, Pill, ProgressBar, Text } from '@/components/ui';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface BookGroup {
@@ -67,33 +68,16 @@ const getStatusColor = (status: string, T: Theme): string => {
   }
 };
 
+const getStatusTone = (status: string): 'sage' | 'accent' | 'neutral' => {
+  switch (status) {
+    case 'completed': return 'sage';
+    case 'downloading': return 'accent';
+    default: return 'neutral';
+  }
+};
+
 const statusLabel = (status: string): string =>
   status.charAt(0).toUpperCase() + status.slice(1);
-
-// ── Progress Bar ─────────────────────────────────────────────────────────────
-function ProgressBar({
-  progressPcnt,
-  status,
-  T,
-}: {
-  progressPcnt: number;
-  status: string;
-  T: Theme;
-}) {
-  return (
-    <View style={[styles.barTrack, { backgroundColor: T.inkHairline }]}>
-      <View
-        style={[
-          styles.barFill,
-          {
-            width: `${Math.min(progressPcnt, 100)}%` as any,
-            backgroundColor: getStatusColor(status, T),
-          },
-        ]}
-      />
-    </View>
-  );
-}
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 export default function DownloadTab() {
@@ -154,7 +138,6 @@ export default function DownloadTab() {
         showsVerticalScrollIndicator={false}
       >
         {bookList.map(book => {
-          // console.log("=== total sz", book.totalSize, "=== total progress", book.totalProgress)
           const overallPcnt =
             book.totalSize > 0 && !isNaN(book.totalSize)
               ? (book.totalProgress / book.totalSize) * 100
@@ -162,16 +145,7 @@ export default function DownloadTab() {
           const spineColor = getStatusColor(book.status, T);
 
           return (
-            <View
-              key={book.bookId}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: T.surface,
-                  borderColor: T.inkHairline,
-                },
-              ]}
-            >
+            <Card key={book.bookId} style={styles.card}>
               {/* ── Header ── */}
               <View style={styles.cardHeader}>
                 {/* Status spine */}
@@ -193,17 +167,12 @@ export default function DownloadTab() {
                 </View>
 
                 {/* Status badge */}
-                <View style={styles.badge}>
-                  <View style={[styles.dot, { backgroundColor: spineColor }]} />
-                  <Text style={[styles.badgeText, { color: spineColor }]}>
-                    {statusLabel(book.status)}
-                  </Text>
-                </View>
+                <Pill label={statusLabel(book.status)} tone={getStatusTone(book.status)} />
               </View>
 
               {/* ── Overall progress ── */}
               <View style={styles.progressRow}>
-                <ProgressBar progressPcnt={overallPcnt} status={book.status} T={T} />
+                <ProgressBar progress={overallPcnt / 100} tone={spineColor} height={2} style={{ flex: 1 }} />
                 <Text style={[styles.progressPcnt, { color: T.inkMuted }]}>
                   {overallPcnt.toFixed(0)}%
                 </Text>
@@ -236,7 +205,7 @@ export default function DownloadTab() {
                   );
                 })}
               </View>
-            </View>
+            </Card>
           );
         })}
       </ScrollView>
@@ -288,10 +257,7 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    borderRadius: 14,
-    borderWidth: 0.5,
     marginBottom: 12,
-    overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -316,24 +282,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Badge
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  badgeText: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 10,
-    letterSpacing: 0.08,
-    textTransform: 'uppercase',
-  },
-
   // Progress
   progressRow: {
     flexDirection: 'row',
@@ -341,15 +289,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 14,
     paddingBottom: 12,
-  },
-  barTrack: {
-    flex: 1,
-    height: 2,
-    borderRadius: 1,
-  },
-  barFill: {
-    height: 2,
-    borderRadius: 1,
   },
   progressPcnt: {
     fontFamily: 'DMSans_500Medium',

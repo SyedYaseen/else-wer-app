@@ -4,7 +4,7 @@
 import { StyleSheet, Text, View, Image, Dimensions } from 'react-native';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import { Audiobook } from '@/data/database/models';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
 
 const { width } = Dimensions.get('window');
 

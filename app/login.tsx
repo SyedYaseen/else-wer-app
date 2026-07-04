@@ -1,3 +1,6 @@
+// app/login.tsx — Folio Login
+// Built on the shared components/ui primitive layer — see DESIGN_SYSTEM.md.
+
 import React, { useState } from 'react';
 import {
   View,
@@ -8,14 +11,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import { login } from '@/data/api/api';
-import { useTheme, Theme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
+import { Button, Card, Pill } from '@/components/ui';
 
 // ── Dev toggle data ───────────────────────────────────────────────────────────
 
@@ -41,14 +44,14 @@ type InputRowProps = {
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   showPassword?: boolean;
   onToggleShow?: () => void;
-  T: Theme;
 };
 
 function InputRow({
   label, value, onChangeText, placeholder,
   secureTextEntry, autoCapitalize, icon,
-  showPassword, onToggleShow, T,
+  showPassword, onToggleShow,
 }: InputRowProps) {
+  const T = useTheme();
   return (
     <View style={styles.fieldGroup}>
       <Text style={[styles.fieldLabel, { color: T.inkSubtle }]}>{label}</Text>
@@ -122,8 +125,6 @@ export default function Login() {
       await AsyncStorage.setItem('token', data.token);
       await AsyncStorage.setItem('server', server + '/api');
       setServerStore(server + '/api');
-      // useAuthGate will pick up the new token and redirect automatically,
-      // but an explicit replace is fine too and feels snappier.
       router.replace('/');
     } catch (err: any) {
       console.error('Failed to connect:', server, err);
@@ -150,7 +151,7 @@ export default function Login() {
         </View>
 
         {/* ── Form card ── */}
-        <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.inkHairline }]}>
+        <Card style={{ borderRadius: T.radius.xl, padding: T.space.xl, gap: T.space.lg }}>
 
           <InputRow
             label="Server address"
@@ -159,7 +160,6 @@ export default function Login() {
             onChangeText={setServer}
             placeholder="http://192.168.1.x:3000"
             autoCapitalize="none"
-            T={T}
           />
 
           <InputRow
@@ -169,7 +169,6 @@ export default function Login() {
             onChangeText={setUsername}
             placeholder="username"
             autoCapitalize="none"
-            T={T}
           />
 
           <InputRow
@@ -182,7 +181,6 @@ export default function Login() {
             showPassword={showPass}
             onToggleShow={() => setShowPass(v => !v)}
             autoCapitalize="none"
-            T={T}
           />
 
           {error ? (
@@ -195,36 +193,15 @@ export default function Login() {
             </View>
           ) : null}
 
-          <Pressable
-            onPress={handleLogin}
-            disabled={loading}
-            style={[styles.loginBtn, { backgroundColor: T.ink, opacity: loading ? 0.7 : 1 }]}
-          >
-            {loading
-              ? <ActivityIndicator size="small" color={T.background} />
-              : <Text style={[styles.loginBtnText, { color: T.background }]}>Sign in</Text>
-            }
-          </Pressable>
-        </View>
+          <Button label="Sign in" onPress={handleLogin} loading={loading} />
+        </Card>
 
         {/* ── Dev toggles ── */}
         {__DEV__ && (
           <View style={styles.devSection}>
             <View style={styles.devRow}>
-              <Pressable
-                onPress={toggleServer}
-                style={[styles.devPill, { backgroundColor: T.surfaceDeep, borderColor: T.inkHairline }]}
-              >
-                <MaterialIcons name="swap-horiz" size={12} color={T.inkSubtle} />
-                <Text style={[styles.devPillText, { color: T.inkSubtle }]}>Toggle server</Text>
-              </Pressable>
-              <Pressable
-                onPress={toggleCreds}
-                style={[styles.devPill, { backgroundColor: T.surfaceDeep, borderColor: T.inkHairline }]}
-              >
-                <MaterialIcons name="swap-horiz" size={12} color={T.inkSubtle} />
-                <Text style={[styles.devPillText, { color: T.inkSubtle }]}>Toggle creds</Text>
-              </Pressable>
+              <Pill icon="swap-horiz" label="Toggle server" onPress={toggleServer} />
+              <Pill icon="swap-horiz" label="Toggle creds" onPress={toggleCreds} />
             </View>
             <Text style={[styles.devHint, { color: T.inkSubtle }]}>{server}</Text>
           </View>
@@ -254,12 +231,6 @@ const styles = StyleSheet.create({
     fontSize: 52,
     lineHeight: 56,
     marginBottom: 8,
-  },
-  card: {
-    borderRadius: 20,
-    borderWidth: 0.5,
-    padding: 24,
-    gap: 16,
   },
   fieldGroup: { gap: 6 },
   fieldLabel: {
@@ -300,17 +271,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
-  loginBtn: {
-    height: 50,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loginBtnText: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 15,
-    letterSpacing: 0.02,
-  },
   devSection: {
     marginTop: 32,
     alignItems: 'center',
@@ -319,19 +279,6 @@ const styles = StyleSheet.create({
   devRow: {
     flexDirection: 'row',
     gap: 10,
-  },
-  devPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 100,
-    borderWidth: 0.5,
-  },
-  devPillText: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 11,
   },
   devHint: {
     fontFamily: 'DMSans_300Light',

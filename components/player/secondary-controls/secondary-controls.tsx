@@ -6,7 +6,7 @@ import ChaptersButton from './chapters';
 import PlaybackSpeedButton from './playback-speed';
 import SleepTimerButton from './sleep-timer';
 import VolumeButton from './volume';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
 
 export default function SecondaryControls() {
     const T = useTheme();

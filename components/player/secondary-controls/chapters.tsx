@@ -2,7 +2,7 @@
 // ⚠️ Logic unchanged. L&F only.
 
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet, FlatList, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAudioPlayerStore } from "@/components/store/audio-player-store";
 import { FileRow } from "@/data/database/models";
@@ -10,7 +10,8 @@ import { formatTime } from "@/utils/formatTime";
 import { getFileProgressLcl } from "@/data/database/sync-repo";
 import { getFileProgressServer, saveProgress } from "@/data/api/api";
 import { getFileProgress } from "@/data/lib/conflict-handling";
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
+import { IconButton, BottomSheet } from '@/components/ui';
 
 const screenHeight = Dimensions.get("window").height;
 
@@ -21,28 +22,32 @@ export default function ChaptersButton() {
 
     return (
         <>
-            <TouchableOpacity onPress={() => setShow(true)} style={styles.iconButton}>
-                <MaterialIcons name="menu-book" size={26} color={T.inkMuted} />
-            </TouchableOpacity>
+            <IconButton icon="menu-book" size="xl" tone={T.inkMuted} onPress={() => setShow(true)} />
 
-            <Modal transparent visible={show} animationType="slide">
-                <View style={styles.overlay}>
-                    <TouchableOpacity style={styles.backdrop} onPress={() => setShow(false)} />
-                    <View style={[styles.bottomSheet, { backgroundColor: T.surface, borderTopColor: T.inkHairline }]}>
-                        <View style={[styles.sheetHandle, { backgroundColor: T.inkHairline }]} />
-                        <Text style={[styles.sheetTitle, { color: T.ink }]}>Chapters</Text>
-                        <FlatList
-                            data={files}
-                            keyExtractor={item => item.id.toString()}
-                            renderItem={({ item }) => <ChapterRow fileRow={item} />}
-                            showsVerticalScrollIndicator={false}
-                            ItemSeparatorComponent={() => (
-                                <View style={[styles.separator, { backgroundColor: T.inkHairline }]} />
-                            )}
-                        />
-                    </View>
-                </View>
-            </Modal>
+            <BottomSheet
+                visible={show}
+                onClose={() => setShow(false)}
+                style={{
+                    maxHeight: screenHeight * 0.55,
+                    borderTopLeftRadius: 20,
+                    borderTopRightRadius: 20,
+                    paddingHorizontal: 20,
+                    paddingTop: 10,
+                    paddingBottom: 32,
+                }}
+            >
+                <View style={[styles.sheetHandle, { backgroundColor: T.inkHairline }]} />
+                <Text style={[styles.sheetTitle, { color: T.ink }]}>Chapters</Text>
+                <FlatList
+                    data={files}
+                    keyExtractor={item => item.id.toString()}
+                    renderItem={({ item }) => <ChapterRow fileRow={item} />}
+                    showsVerticalScrollIndicator={false}
+                    ItemSeparatorComponent={() => (
+                        <View style={[styles.separator, { backgroundColor: T.inkHairline }]} />
+                    )}
+                />
+            </BottomSheet>
         </>
     );
 }
@@ -119,21 +124,6 @@ const ChapterRow = ({ fileRow }: { fileRow: FileRow }) => {
 };
 
 const styles = StyleSheet.create({
-    iconButton: { padding: 10, alignItems: 'center' },
-
-    overlay: { flex: 1, justifyContent: 'flex-end' },
-    backdrop: { ...StyleSheet.absoluteFillObject },
-
-    bottomSheet: {
-        maxHeight: screenHeight * 0.55,
-        width: '100%',
-        borderTopWidth: 0.5,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingHorizontal: 20,
-        paddingBottom: 32,
-        paddingTop: 10,
-    },
     sheetHandle: {
         width: 36,
         height: 4,

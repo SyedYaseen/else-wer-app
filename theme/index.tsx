@@ -1,56 +1,50 @@
-// constants/theme.ts — Folio Design System
+// theme/index.tsx — Folio Design System
 //
 // Supports three modes: 'system' (follows OS), 'light', 'dark'.
 //
 // Setup — wrap your root _layout.tsx:
-//   import { ThemeProvider } from '@/constants/theme';
+//   import { ThemeProvider } from '@/theme';
 //   export default function RootLayout() {
 //     return <ThemeProvider><Stack /></ThemeProvider>;
 //   }
 //
 // Usage in any screen or component:
-//   const T = useTheme();                          // colour tokens
-//   const { colorMode, setColorMode } = useThemeToggle(); // toggle
+//   const T = useTheme();                                  // colour + design tokens
+//   const { colorMode, setColorMode } = useThemeToggle();   // toggle
+//
+// T.ink / T.accent / ... — flat colour tokens (unchanged since the original
+// components/hooks/useTheme.tsx; every existing call site keeps working).
+// T.space / T.radius / T.font / T.icon / T.shadow — namespaced design tokens.
 
 import React, { createContext, useContext, useState } from 'react';
 import { useColorScheme } from 'react-native';
+import { light, dark } from './colors';
+import { space } from './spacing';
+import { font } from './typography';
+import { radius } from './radius';
+import { icon } from './icons';
+import { getShadows } from './shadows';
 
-// ── Token sets ────────────────────────────────────────────────────────────────
+export { light, dark };
+export { space } from './spacing';
+export { font } from './typography';
+export { radius } from './radius';
+export { icon } from './icons';
 
-const light = {
-    background: '#FDFBF8',
-    surface: '#F5F2EC',
-    surfaceDeep: '#EDE9E1',
-    ink: '#1C1B19',
-    inkMuted: '#6B6860',
-    inkSubtle: '#B5B3AE',
-    inkHairline: '#ECEAE6',
-    accent: '#8C7355',
-    accentLight: '#C4A882',
-    accentMuted: '#F0E8DC',
-    sage: '#5C7A6E',
-    warning: '#A0622A',
-    danger: '#8B3A3A',
-};
-
-const dark = {
-    background: '#141210',
-    surface: '#1E1C19',
-    surfaceDeep: '#252320',
-    ink: '#F0EDE7',
-    inkMuted: '#9C9890',
-    inkSubtle: '#5C5A55',
-    inkHairline: '#2E2C29',
-    accent: '#C4A882',
-    accentLight: '#8C7355',
-    accentMuted: '#2A2318',
-    sage: '#7AA898',
-    warning: '#C8843A',
-    danger: '#B85555',
-};
-
-export type Theme = typeof light;
 export type ColorMode = 'light' | 'dark' | 'system';
+
+const staticTokens = { space, font, radius, icon };
+
+function composeTheme(mode: 'light' | 'dark') {
+    const colors = mode === 'dark' ? dark : light;
+    return {
+        ...colors,
+        ...staticTokens,
+        shadow: getShadows(mode),
+    };
+}
+
+export type Theme = ReturnType<typeof composeTheme>;
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
@@ -62,7 +56,7 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
-    theme: light,
+    theme: composeTheme('light'),
     activeMode: 'light',
     colorMode: 'system',
     setColorMode: () => { },
@@ -77,11 +71,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const activeMode: 'light' | 'dark' =
         colorMode === 'system' ? systemScheme : colorMode;
 
-    const theme = activeMode === 'dark' ? dark : light;
+    const theme = composeTheme(activeMode);
 
     return (
-        <ThemeContext.Provider value={{ theme, activeMode, colorMode, setColorMode }
-        }>
+        <ThemeContext.Provider value={{ theme, activeMode, colorMode, setColorMode }}>
             {children}
         </ThemeContext.Provider>
     );
@@ -89,7 +82,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
-/** Returns the active colour token set. */
+/** Returns the active token set (colours + design tokens). */
 export function useTheme(): Theme {
     return useContext(ThemeContext).theme;
 }
@@ -102,5 +95,3 @@ export function useThemeToggle() {
     const { activeMode, colorMode, setColorMode } = useContext(ThemeContext);
     return { activeMode, colorMode, setColorMode };
 }
-
-export { light, dark };

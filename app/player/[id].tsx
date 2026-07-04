@@ -1,8 +1,7 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import React, { useEffect, useRef } from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { getBook, getFilesForBook } from '@/data/database/audiobook-repo';
-import { MaterialIcons } from '@expo/vector-icons';
 import Controls from '@/components/player/controls';
 import BookInfo from '@/components/player/book-info';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
@@ -11,7 +10,8 @@ import { useProgressUpdate } from '@/components/hooks/useProgressUpdate';
 import { getBookProgress } from '@/data/lib/conflict-handling';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
+import { IconButton } from '@/components/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Audiobook, FileRow } from '@/data/database/models';
 
@@ -167,13 +167,13 @@ export default function Player() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: T.background, paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
+        <IconButton
+          icon="keyboard-arrow-down"
+          size="xl"
+          tone={T.inkMuted}
           onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="keyboard-arrow-down" size={28} color={T.inkMuted} />
-        </TouchableOpacity>
+          style={styles.backBtn}
+        />
         <BookInfo currentBook={currentBook} />
         <Controls />
       </View>

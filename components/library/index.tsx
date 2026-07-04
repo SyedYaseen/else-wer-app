@@ -2,7 +2,6 @@ import {
   FlatList,
   View,
   StyleSheet,
-  Dimensions,
   RefreshControl,
   Text,
   TouchableOpacity,
@@ -12,7 +11,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/components/hooks/useTheme";
+import { useTheme } from "@/theme";
 import { scanServerFiles } from "@/data/api/api";
 import BookCard from "./book-card";
 import { SearchBar } from "./searchbar";
@@ -21,15 +20,9 @@ import { useBookSearch } from "../hooks/useBooksSearch";
 import { useLibraryBooks, useInProgressBooks, LIBRARY_KEYS } from "../hooks/useLibraryBooks";
 import { InProgressRow } from "./inprogress-row";
 import { LibraryHeader } from "./library-header";
+import { NUM_COLUMNS, H_PADDING, COL_GAP, ITEM_WIDTH } from "./layout-constants";
 
 const TAG = "[Library]";
-
-const NUM_COLUMNS = 2;
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const H_PADDING = 16;
-const COL_GAP = 10;
-export const ITEM_WIDTH =
-  (SCREEN_WIDTH - H_PADDING * 2 - COL_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
 function Library() {
   const T = useTheme();

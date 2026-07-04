@@ -9,7 +9,8 @@ import { useAudioController } from '../hooks/useAudioController';
 import { useAudioPlayerStore } from '../store/audio-player-store';
 import { router, usePathname } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/components/hooks/useTheme';
+import { useTheme } from '@/theme';
+import { ProgressBar } from '@/components/ui';
 
 export default function MiniPlayer() {
     // ── All hooks unconditionally first ───────────────────────────────────────
@@ -60,10 +61,7 @@ export default function MiniPlayer() {
                 </TouchableOpacity>
 
                 {/* Progress bar */}
-                <View style={[styles.progressBackground, { backgroundColor: T.inkHairline }]}>
-                    <View style={[styles.progressFill, { flex: progress, backgroundColor: T.accent }]} />
-                    <View style={{ flex: 1 - progress }} />
-                </View>
+                <ProgressBar progress={progress} height={2} style={styles.progressBackground} />
 
             </View>
         </Pressable>
@@ -110,8 +108,5 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: 2,
-        flexDirection: 'row',
     },
-    progressFill: {},
 });

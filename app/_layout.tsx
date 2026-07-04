@@ -7,14 +7,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from '@/components/hooks/useColorScheme';
 import { initDb } from '@/data/database/initdb';
 import useInitPlayer from '@/components/hooks/useInitPlayer';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
 import { View, StyleSheet, Platform } from 'react-native';
 import { DownloadManager } from '@/data/lib/download-manager';
-import { useDownloadStore } from '@/components/store/download-strore';
-import { ThemeProvider, useTheme } from '@/components/hooks/useTheme';
+import { useDownloadStore } from '@/components/store/download-store';
+import { ThemeProvider, useTheme } from '@/theme';
 import { useNetworkState } from '@/components/store/network-store';
 
 // ── Folio font imports from expo-google-fonts ─────────────────────────────────
@@ -74,8 +73,8 @@ function ThemedStack() {
           backgroundColor: T.background,
         },
         headerTitleStyle: {
-          fontFamily: 'DMSerifDisplay_400Regular',
-          fontSize: 18,
+          fontFamily: T.font.serif.regular,
+          fontSize: T.font.size.xl,
           color: T.ink,
         },
         headerTintColor: T.ink,
