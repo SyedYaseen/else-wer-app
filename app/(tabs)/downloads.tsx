@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { BookProgressData, DownloadItem, useDownloadStore } from '@/components/store/download-store';
 import { useTheme, Theme } from '@/theme';
 import { Card, Pill, ProgressBar, Text } from '@/components/ui';
+import { clamp01 } from '@/components/ui/clamp';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface BookGroup {
@@ -138,10 +139,11 @@ export default function DownloadTab() {
         showsVerticalScrollIndicator={false}
       >
         {bookList.map(book => {
-          const overallPcnt =
+          const overallFraction =
             book.totalSize > 0 && !isNaN(book.totalSize)
-              ? (book.totalProgress / book.totalSize) * 100
+              ? clamp01(book.totalProgress / book.totalSize)
               : 0;
+          const overallPcnt = overallFraction * 100;
           const spineColor = getStatusColor(book.status, T);
 
           return (
@@ -172,7 +174,7 @@ export default function DownloadTab() {
 
               {/* ── Overall progress ── */}
               <View style={styles.progressRow}>
-                <ProgressBar progress={overallPcnt / 100} tone={spineColor} height={2} style={{ flex: 1 }} />
+                <ProgressBar progress={overallFraction} color={spineColor} height={2} style={{ flex: 1 }} />
                 <Text style={[styles.progressPcnt, { color: T.inkMuted }]}>
                   {overallPcnt.toFixed(0)}%
                 </Text>
@@ -183,7 +185,7 @@ export default function DownloadTab() {
                 {book.files.map(file => {
                   const filePcnt =
                     file.fileSize > 0
-                      ? (file.progress / file.fileSize) * 100
+                      ? clamp01(file.progress / file.fileSize) * 100
                       : 0;
                   return (
                     <View key={file.fileId} style={styles.fileRow}>

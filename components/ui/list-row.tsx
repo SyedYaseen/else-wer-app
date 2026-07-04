@@ -4,9 +4,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Switch, StyleProp, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/theme';
-
-type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
+import { useTheme, IconName } from '@/theme';
+import { IconWell } from './icon-well';
 
 export type ListRowProps = {
     icon: IconName;
@@ -32,7 +31,6 @@ export function ListRow({
     style,
 }: ListRowProps) {
     const T = useTheme();
-    const iconTint = tint ?? T.ink;
 
     return (
         <TouchableOpacity
@@ -52,18 +50,7 @@ export function ListRow({
             activeOpacity={toggle ? 1 : 0.55}
             disabled={!onPress && !toggle}
         >
-            <View
-                style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: T.radius.sm,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: iconTint + '18',
-                }}
-            >
-                <MaterialIcons name={icon} size={T.icon.md} color={iconTint} />
-            </View>
+            <IconWell icon={icon} tint={tint} />
 
             <View style={{ flex: 1 }}>
                 <Text
@@ -93,7 +80,7 @@ export function ListRow({
                 <Switch
                     value={toggle.value}
                     onValueChange={toggle.onValueChange}
-                    trackColor={{ false: T.inkHairline, true: T.accent + 'AA' }}
+                    trackColor={{ false: T.inkHairline, true: T.accent + T.alpha.strong }}
                     thumbColor={toggle.value ? T.accent : T.inkSubtle}
                     ios_backgroundColor={T.inkHairline}
                 />

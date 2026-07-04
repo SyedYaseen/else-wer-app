@@ -3,6 +3,9 @@
 // illustrative sizes above that, e.g. 76px, are left as literals rather
 // than forced into the scale).
 
+import type React from 'react';
+import type { MaterialIcons } from '@expo/vector-icons';
+
 export const icon = {
     xs: 12,
     sm: 16,
@@ -14,3 +17,6 @@ export const icon = {
 } as const;
 
 export type IconScale = typeof icon;
+
+/** Single canonical name type for MaterialIcons — import this instead of redeclaring it per-file. */
+export type IconName = React.ComponentProps<typeof MaterialIcons>['name'];

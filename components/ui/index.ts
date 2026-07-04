@@ -36,3 +36,8 @@ export type { SpinnerProps } from './spinner';
 
 export { BottomSheet } from './bottom-sheet';
 export type { BottomSheetProps } from './bottom-sheet';
+
+export { IconWell } from './icon-well';
+export type { IconWellProps } from './icon-well';
+
+export { useDisclosure } from './use-disclosure';

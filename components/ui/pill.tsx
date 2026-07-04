@@ -4,15 +4,14 @@
 import React from 'react';
 import { Pressable, Text, StyleProp, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/theme';
+import { useTheme, IconName } from '@/theme';
 
-type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
-type Tone = 'neutral' | 'accent' | 'sage' | 'warning' | 'danger';
+type PillTone = 'neutral' | 'accent' | 'sage' | 'warning' | 'danger';
 
 export type PillProps = {
     label: string;
     icon?: IconName;
-    tone?: Tone;
+    tone?: PillTone;
     onPress?: () => void;
     style?: StyleProp<ViewStyle>;
 };

@@ -2,40 +2,44 @@
 // components/downloads/progress.tsx.
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTheme } from '@/theme';
+import { clamp01 } from './clamp';
 
 export type ProgressRingProps = {
     /** 0–1 */
     progress: number;
     size?: number;
     strokeWidth?: number;
-    tone?: string;
-    trackTone?: string;
+    /** Resolved color values (e.g. `T.accent`), not semantic tone names — see Pill/Text for that contract. */
+    color?: string;
+    trackColor?: string;
     showLabel?: boolean;
+    style?: StyleProp<ViewStyle>;
 };
 
 export function ProgressRing({
     progress,
     size = 52,
     strokeWidth = 3,
-    tone,
-    trackTone,
+    color,
+    trackColor,
     showLabel = true,
+    style,
 }: ProgressRingProps) {
     const T = useTheme();
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
-    const clamped = Math.max(0, Math.min(1, progress));
+    const clamped = clamp01(progress);
     const strokeDashoffset = circumference - clamped * circumference;
     const pcnt = Math.round(clamped * 100);
 
     return (
-        <View style={{ width: size, height: size }}>
+        <View style={[{ width: size, height: size }, style]}>
             <Svg width={size} height={size}>
                 <Circle
-                    stroke={trackTone ?? T.inkHairline}
+                    stroke={trackColor ?? T.inkHairline}
                     fill="none"
                     cx={size / 2}
                     cy={size / 2}
@@ -43,7 +47,7 @@ export function ProgressRing({
                     strokeWidth={strokeWidth}
                 />
                 <Circle
-                    stroke={tone ?? T.accent}
+                    stroke={color ?? T.accent}
                     fill="none"
                     cx={size / 2}
                     cy={size / 2}

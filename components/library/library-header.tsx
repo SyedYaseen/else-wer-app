@@ -105,8 +105,8 @@ export function LibraryHeader({ bookCount, onRescan, isRescanning }: LibraryHead
                         style={[
                             styles.pill,
                             {
-                                borderColor: isOnline ? T.inkHairline : T.accent + "66",
-                                backgroundColor: isOnline ? "transparent" : T.accent + "14",
+                                borderColor: isOnline ? T.inkHairline : T.accent + T.alpha.medium,
+                                backgroundColor: isOnline ? "transparent" : T.accent + T.alpha.faint,
                             },
                         ]}
                         onPress={handleNetworkToggle}

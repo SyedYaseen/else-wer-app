@@ -9,11 +9,13 @@ interface AudioPlayerState {
     player: AudioPlayer | null;
     setPlayer: (player: AudioPlayer) => void;
 
-    currentBookId: number | null;
-    setCurrentBookId: (id: number) => void;
-
     currentBook: Audiobook | null;
     setCurrentBook: (book: Audiobook | null) => void;
+
+    // Bumped every setCurrentBook call. Lets stale async continuations (e.g. a
+    // saveProgress().then() started before a book switch) detect they resolved
+    // after the book changed and bail instead of clobbering the new book's state.
+    bookLoadSeq: number;
 
     queue: FileRow[] | null;
     setQueue: (q: FileRow[]) => void;
@@ -35,11 +37,10 @@ export const useAudioPlayerStore = create<AudioPlayerState>((set) => ({
     player: null,
     setPlayer: (player: AudioPlayer) => set({ player }),
 
-    currentBookId: null,
-    setCurrentBookId: (id: number) => set({ currentBookId: id }),
-
     currentBook: null,
-    setCurrentBook: (book: Audiobook | null) => set({ currentBook: book }),
+    setCurrentBook: (book: Audiobook | null) => set((s) => ({ currentBook: book, bookLoadSeq: s.bookLoadSeq + 1 })),
+
+    bookLoadSeq: 0,
 
     queue: null,
     setQueue: (queue: FileRow[]) => set({ queue }),

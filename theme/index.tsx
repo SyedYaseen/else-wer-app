@@ -23,6 +23,8 @@ import { space } from './spacing';
 import { font } from './typography';
 import { radius } from './radius';
 import { icon } from './icons';
+import { alpha } from './alpha';
+import { opacity } from './opacity';
 import { getShadows } from './shadows';
 
 export { light, dark };
@@ -30,10 +32,13 @@ export { space } from './spacing';
 export { font } from './typography';
 export { radius } from './radius';
 export { icon } from './icons';
+export type { IconName } from './icons';
+export { alpha } from './alpha';
+export { opacity } from './opacity';
 
 export type ColorMode = 'light' | 'dark' | 'system';
 
-const staticTokens = { space, font, radius, icon };
+const staticTokens = { space, font, radius, icon, alpha, opacity };
 
 function composeTheme(mode: 'light' | 'dark') {
     const colors = mode === 'dark' ? dark : light;

@@ -6,6 +6,7 @@ export type DownloadManagerApi = {
   startQueue?: () => Promise<void>
   pause?: (bookId: number) => void
   resume?: (bookId: number) => void
+  cancelBook?: (bookId: number) => void
 }
 
 export type DownloadStatus = 'pending' | 'downloading' | 'paused' | 'failed' | 'complete'
@@ -31,7 +32,6 @@ export interface BookProgressData {
 type BookProgress = Record<number, BookProgressData>;
 
 export interface DownloadState {
-  queue: DownloadItem[]
   items: Record<string, DownloadItem>
   downloadManager?: DownloadManagerApi | null
   bookProgress: BookProgress
@@ -49,9 +49,7 @@ export interface DownloadState {
 export const useDownloadStore = create<DownloadState>()(subscribeWithSelector(
 
   persist((set, get) => ({
-    queue: [],
     items: {},
-    progress: null,
     bookProgress: {},
     downloadManager: null,
     addToQueue: ({ bookId, fileId, fileName, fileSize, author, title }) => set((s) => {
@@ -69,7 +67,7 @@ export const useDownloadStore = create<DownloadState>()(subscribeWithSelector(
         localPath: undefined,
         error: null,
       }
-      return { queue: [...s.queue, item], items: { ...s.items, [key]: item } }
+      return { items: { ...s.items, [key]: item } }
     }),
 
     setProgress: (bookId, fileId, progress) =>
@@ -80,12 +78,15 @@ export const useDownloadStore = create<DownloadState>()(subscribeWithSelector(
 
         const updatedItems = {
           ...s.items,
-          [key]: { ...item, progress: item.progress + progress }, // absolute, not accumulated
+          [key]: { ...item, progress: Math.max(0, Math.min(item.progress + progress, item.fileSize)) },
         };
+
+        const existingBookProgress = s.bookProgress[bookId];
+        if (!existingBookProgress) return { items: updatedItems };
 
         const overallBookProgress = {
           ...s.bookProgress,
-          [bookId]: { ...s.bookProgress[bookId], currentProgress: (s.bookProgress[bookId].currentProgress ?? 0) + progress }
+          [bookId]: { ...existingBookProgress, currentProgress: Math.max(0, Math.min(existingBookProgress.currentProgress + progress, existingBookProgress.totalSize)) }
         }
 
         return {
@@ -106,30 +107,32 @@ export const useDownloadStore = create<DownloadState>()(subscribeWithSelector(
       };
     }),
 
-    resetDownload: (bookId) => set((s) => {
-      if (!bookId) return s;
+    resetDownload: (bookId) => {
+      get().downloadManager?.cancelBook?.(bookId);
+      set((s) => {
+        if (!bookId) return s;
 
-      const key = `${bookId}_`;
-      const updatedItems = { ...s.items }
+        const key = `${bookId}_`;
+        const updatedItems = { ...s.items }
 
-      Object.keys(s.items).forEach(k => {
-        if (k.startsWith(key)) {
-          delete updatedItems[k]
-        }
-      })
+        Object.keys(s.items).forEach(k => {
+          if (k.startsWith(key)) {
+            delete updatedItems[k]
+          }
+        })
 
-      const updatedBookProgress = { ...s.bookProgress }
-      delete updatedBookProgress[bookId]
+        const updatedBookProgress = { ...s.bookProgress }
+        delete updatedBookProgress[bookId]
 
-      return {
-        items: updatedItems,
-        bookProgress: updatedBookProgress
-      };
-    }),
+        return {
+          items: updatedItems,
+          bookProgress: updatedBookProgress
+        };
+      });
+    },
 
     clearAllDownloads: () => set((s) => {
       return {
-        queue: [],
         items: {},
         bookProgress: {}
       };
@@ -171,7 +174,6 @@ export const useDownloadStore = create<DownloadState>()(subscribeWithSelector(
     partialize: (state) => ({
       items: state.items,
       bookProgress: state.bookProgress,
-      queue: state.queue,
     }),
   })
 ))

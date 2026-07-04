@@ -35,13 +35,11 @@ Before editing:
 - Search for existing implementations of the same pattern.
 - Prefer modifying existing code over introducing new abstractions.
 - Preserve naming conventions and project architecture.
-- If there many items to be done, split them into phases and save it to a file so work can be continued across sessions
+- If there many items to be done, split them into phases and save it to a file so work can be continued across sessions.
 - If there are out of scope items/ deferred for later items when doing a particular task add thme to a separate file so they can be addressed later.
 
 ## Validation
-
 After making changes:
-
 - Build or run the smallest relevant test.
 - Fix compilation or lint errors introduced by your changes.
 - Do not modify unrelated files.

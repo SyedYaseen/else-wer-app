@@ -5,9 +5,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/theme';
-
-type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
+import { useTheme, IconName } from '@/theme';
 
 export type SegmentOption<V extends string> = {
     value: V;
@@ -72,7 +70,7 @@ export function SegmentedControl<V extends string>({
                         {opt.icon && (
                             <MaterialIcons
                                 name={opt.icon}
-                                size={15}
+                                size={T.icon.sm}
                                 color={active ? T.accent : T.inkSubtle}
                             />
                         )}

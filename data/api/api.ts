@@ -93,6 +93,20 @@ export async function removeAllLocalBooks() {
 }
 
 // Sync
+
+// Unified "chapter complete" threshold — a file is considered finished once
+// playback is within this many seconds of its end. Kept in one place because
+// this used to drift between call sites (some used duration-3, others duration-5).
+export const COMPLETION_THRESHOLD_SEC = 3;
+
+// Network calls here have no timeout by default, which can leave callers'
+// in-flight guards (e.g. useProgressUpdate's isSavingRef) stuck forever.
+const SAVE_PROGRESS_TIMEOUT_MS = 8000;
+
+export function isFileComplete(currentTimeSec: number, durationSec: number) {
+  return durationSec > 0 && currentTimeSec > durationSec - COMPLETION_THRESHOLD_SEC;
+}
+
 export const saveProgress = async (
   bookId: number,
   fileId: number,
@@ -117,6 +131,22 @@ export const saveProgress = async (
   }
 }
 
+// Shared shape for the common "save at current position, complete decided by
+// the unified threshold" call — dedupes what used to be copy-pasted per call site.
+export const saveProgressSec = async (
+  bookId: number,
+  fileId: number,
+  currentTimeSec: number,
+  durationSec: number,
+) => saveProgress(bookId, fileId, currentTimeSec * 1000, isFileComplete(currentTimeSec, durationSec));
+
+// Books the server has told us it will never accept progress for again (404 —
+// book/file no longer exists server-side). Kept in memory only: cleared on
+// app restart, so a book that reappears server-side recovers automatically.
+// Local saves are unaffected — this only stops the noisy, pointless server
+// sync retries for a book that's permanently gone.
+const rejectedBookIds = new Set<number>();
+
 export async function saveProgressServer(
   bookId: number,
   fileId: number,
@@ -125,6 +155,10 @@ export async function saveProgressServer(
 ) {
   const isOnline = useNetworkState.getState().isOnline;
   if (!isOnline) return
+  if (rejectedBookIds.has(bookId)) return
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SAVE_PROGRESS_TIMEOUT_MS);
 
   try {
     const body = JSON.stringify({
@@ -137,14 +171,20 @@ export async function saveProgressServer(
     const response = await apiFetch("/update_progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body
+      body,
+      signal: controller.signal,
     })
 
-    if (!response.ok) {
+    if (response.status === 404) {
+      rejectedBookIds.add(bookId);
+      console.error(`Server no longer recognizes book ${bookId} — stopping server sync for it this session`);
+    } else if (!response.ok) {
       console.error("Server error")
     }
   } catch (e) {
     console.error("Err updating progressToServer", e)
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

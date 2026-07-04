@@ -5,7 +5,7 @@ import { getBook, getFilesForBook } from '@/data/database/audiobook-repo';
 import Controls from '@/components/player/controls';
 import BookInfo from '@/components/player/book-info';
 import { useAudioPlayerStore } from '@/components/store/audio-player-store';
-import { saveProgress } from '@/data/api/api';
+import { saveProgressSec } from '@/data/api/api';
 import { useProgressUpdate } from '@/components/hooks/useProgressUpdate';
 import { getBookProgress } from '@/data/lib/conflict-handling';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { useTheme } from '@/theme';
 import { IconButton } from '@/components/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Audiobook, FileRow } from '@/data/database/models';
+import { AudioPlayer } from 'expo-audio';
 
 const TAG = '[Player]';
 
@@ -33,20 +34,38 @@ async function loadBookData(bookId: number) {
 }
 
 export default function Player() {
+  // Gate here: `player` is null until useInitPlayer's async audio-mode setup
+  // resolves (cold start / deep link). PlayerContent's hooks (useProgressUpdate
+  // in particular) require a non-null player, so it must not mount until then.
+  const player = useAudioPlayerStore(s => s.player);
+  const T = useTheme();
+  const insets = useSafeAreaInsets();
+
+  if (!player) {
+    return (
+      <View style={[styles.container, { backgroundColor: T.background, paddingTop: insets.top }]}>
+        <Text style={[styles.stateText, { color: T.inkSubtle }]}>Loading…</Text>
+      </View>
+    );
+  }
+
+  return <PlayerContent player={player} />;
+}
+
+function PlayerContent({ player }: { player: AudioPlayer }) {
   const { id } = useLocalSearchParams<{ id: string }>();
   const bookId = parseInt(id);
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const player = useAudioPlayerStore(s => s.player);
   const currentBook = useAudioPlayerStore(s => s.currentBook);
   const setCurrentBook = useAudioPlayerStore(s => s.setCurrentBook);
   const setFiles = useAudioPlayerStore(s => s.setFiles);
   const setQueue = useAudioPlayerStore(s => s.setQueue);
   const queue = useAudioPlayerStore(s => s.queue);
 
-  useProgressUpdate(player!);
+  useProgressUpdate(player);
 
   // ── Refs for unmount save ────────────────────────────────────────────────
   // Cleanup functions cannot close over React state — they capture the value
@@ -54,6 +73,10 @@ export default function Player() {
   const playerRef = useRef(player);
   const currentBookRef = useRef(currentBook);
   const queueRef = useRef(queue);
+  // Only set once applyBook actually completes a load for this bookId — guards
+  // against the unmount-save firing with stale refs from a previous mount when
+  // this mount's load never ran (e.g. threw `noFiles` and bounced immediately).
+  const loadedRef = useRef(false);
 
   useEffect(() => { playerRef.current = player; }, [player]);
   useEffect(() => { currentBookRef.current = currentBook; }, [currentBook]);
@@ -65,13 +88,13 @@ export default function Player() {
       const p = playerRef.current;
       const book = currentBookRef.current;
       const q = queueRef.current;
-      if (!p || !book || !q?.length) return;
+      if (!loadedRef.current || !p || !book || !q?.length) return;
       console.log(`${TAG} unmount save at ${p.currentTime}s`);
-      saveProgress(
+      saveProgressSec(
         book.id as number,
         q[0].id as number,
-        p.currentTime * 1000,
-        p.currentTime > p.duration - 3,
+        p.currentTime,
+        p.duration,
       ).catch(err => console.error(`${TAG} unmount save failed`, err));
     };
   }, []); // empty deps — cleanup runs only on unmount
@@ -96,17 +119,18 @@ export default function Player() {
 
     const applyBook = async () => {
       if (currentBook && currentBook.id !== bookId && queue && queue?.length > 0) {
-        saveProgress(
+        saveProgressSec(
           currentBook.id as number,
           queue[0].id as number,
-          player.currentTime * 1000,
-          player.currentTime > player.duration - 3,
+          player.currentTime,
+          player.duration,
         ).catch(err => console.error(`${TAG} save-on-switch failed`, err));
       }
 
       setCurrentBook(data.audiobook);
       setFiles(data.files);
       setQueue(data.q);
+      loadedRef.current = true;
 
       const next = data.q[0];
       if (!next?.local_path) return;
@@ -134,8 +158,6 @@ export default function Player() {
       router.replace(`/book/${bookId}`);
     }
   }, [error]);
-
-  if (!player) return null;
 
   const containerStyle = [styles.container, { backgroundColor: T.background, paddingTop: insets.top }];
 
@@ -170,7 +192,7 @@ export default function Player() {
         <IconButton
           icon="keyboard-arrow-down"
           size="xl"
-          tone={T.inkMuted}
+          color={T.inkMuted}
           onPress={() => router.back()}
           style={styles.backBtn}
         />

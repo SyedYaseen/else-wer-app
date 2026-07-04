@@ -76,10 +76,13 @@ export default function BookDetails() {
     setBookSz(bookId, book?.book_size)
     const { data: fileRows, count }: { data: FileRow[], count: number } = await fetchFileMetaFromServer(bookId);
 
-    for (const f of fileRows) {
-      f.local_path = await startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name, fileSize: f.file_size, author: book?.author, title: book?.title });
-      // console.log("local path from book details", f);
-    }
+    // enqueue every file up front (addToQueue runs synchronously per file
+    // before any awaits) so all files show in the downloads UI immediately,
+    // instead of appearing one at a time as each prior file finishes
+    const paths = await Promise.all(
+      fileRows.map(f => startDownload({ bookId: f.book_id, fileId: f.file_id, fileName: f.file_name, fileSize: f.file_size, author: book?.author, title: book?.title }))
+    );
+    fileRows.forEach((f, i) => { f.local_path = paths[i]; });
 
     await upsertFiles(fileRows);
 
@@ -129,7 +132,7 @@ export default function BookDetails() {
             icon="arrow-back"
             size="md"
             onPress={() => router.back()}
-            style={[styles.backBtn, { top: insets.top + 8, backgroundColor: T.background + 'CC' }]}
+            style={[styles.backBtn, { top: insets.top + 8, backgroundColor: T.background + T.alpha.heavy }]}
           />
         </View>
 
@@ -147,7 +150,7 @@ export default function BookDetails() {
             <IconButton
               icon="download"
               size="xxl"
-              tone={T.accent}
+              color={T.accent}
               onPress={handleDownload}
               disabled={isDownloaded || isDownloading}
             />
@@ -155,7 +158,7 @@ export default function BookDetails() {
             <IconButton
               icon="play-circle"
               size="xxl"
-              tone={T.accent}
+              color={T.accent}
               onPress={handlePlay}
               disabled={!isDownloaded}
             />
@@ -163,7 +166,7 @@ export default function BookDetails() {
             <IconButton
               icon="delete"
               size="xxl"
-              tone={T.danger}
+              color={T.danger}
               onPress={handleDelete}
               disabled={!isDownloaded}
             />

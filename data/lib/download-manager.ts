@@ -17,6 +17,7 @@ export class DownloadManager {
   private PROGRESS_PERSIST_MS = 3000 // throttle persisting to AsyncStorage
 
   private lastPersistAt = 0
+  private abortControllers = new Map<string, AbortController>()
 
   constructor() {
     // Optionally restore queue from AsyncStorage
@@ -38,25 +39,34 @@ export class DownloadManager {
 
   async persistQueue() {
     try {
-      await AsyncStorage.setItem('download_queue', JSON.stringify(this.queue))
+      await AsyncStorage.setItem('download_queue_v1', JSON.stringify(this.queue))
     } catch (err) {
       console.warn('persistQueue error', err)
     }
   }
 
   async enqueue(item: { bookId: number; fileId: number }) {
-    this.queue.push(item)
-    await this.persistQueue()
+    const key = `${item.bookId}_${item.fileId}`
+    const alreadyQueuedOrActive =
+      this.queue.some(q => q.bookId === item.bookId && q.fileId === item.fileId) ||
+      this.abortControllers.has(key)
 
-    if (!this.processing) this.startQueue().catch((e) => console.warn(e))
+    if (!alreadyQueuedOrActive) {
+      this.queue.push(item)
+      await this.persistQueue()
+
+      if (!this.processing) this.startQueue().catch((e) => console.warn(e))
+    }
 
     return new Promise<string | null>((resolve) => {
-      const key = `${item.bookId}_${item.fileId}`
-
       const unsubscribe = useDownloadStore.subscribe(
         (state) => state.items[key],
         (current: DownloadItem | undefined) => {
-          if (!current) return;
+          if (!current) {
+            unsubscribe();
+            resolve(null);
+            return;
+          }
 
           if (current.status === "complete") {
             unsubscribe();
@@ -70,6 +80,16 @@ export class DownloadManager {
         }
       )
     })
+  }
+
+  // cancels any queued-but-not-started files for this book and aborts in-flight chunk fetches
+  cancelBook(bookId: number) {
+    this.queue = this.queue.filter(q => q.bookId !== bookId)
+    this.persistQueue().catch(() => { })
+
+    for (const [key, controller] of this.abortControllers) {
+      if (key.startsWith(`${bookId}_`)) controller.abort()
+    }
   }
 
   private async startQueue() {
@@ -97,6 +117,12 @@ export class DownloadManager {
 
     store.setStatus(bookId, fileId, 'downloading')
 
+    // zero out any stale progress from a previous incomplete attempt before
+    // starting a real download; downloadFileInChunksInner tops this back up
+    // itself if it turns out the file is already complete on disk
+    const staleProgress = store.items[key]?.progress ?? 0
+    if (staleProgress) store.setProgress(bookId, fileId, -staleProgress)
+
     try {
       // call chunked downloader which uses concurrency internally
       const localPath = await this.downloadFileInChunks(bookId, fileId, fileName)
@@ -114,6 +140,19 @@ export class DownloadManager {
   private async downloadFileInChunks(bookId: number, fileId: number, fileName?: string) {
     const store = useDownloadStore.getState()
 
+    const key = `${bookId}_${fileId}`
+    const controller = new AbortController()
+    this.abortControllers.set(key, controller)
+    try {
+      return await this.downloadFileInChunksInner(bookId, fileId, controller, fileName)
+    } finally {
+      this.abortControllers.delete(key)
+    }
+  }
+
+  private async downloadFileInChunksInner(bookId: number, fileId: number, controller: AbortController, fileName?: string) {
+    const store = useDownloadStore.getState()
+
     const baseUrl = await AsyncStorage.getItem('server')
     const token = await AsyncStorage.getItem('token')
     if (!baseUrl) throw new Error('server not configured')
@@ -121,7 +160,7 @@ export class DownloadManager {
     const fileUrlBase = `${baseUrl}/download_chunk/${fileId}`
 
     // HEAD to get size
-    const headResp = await fetch(fileUrlBase, { method: 'HEAD', headers: { Authorization: `Bearer ${token}` } })
+    const headResp = await fetch(fileUrlBase, { method: 'HEAD', headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
     const totalSize = Number(headResp.headers.get('content-length') || '0')
     console.log("Total sz from head", totalSize / (1024 * 1024))
     if (!totalSize) throw new Error('Unable to determine file size')
@@ -149,9 +188,20 @@ export class DownloadManager {
     }
 
     // Step 3: create the file
+    const key = `${bookId}_${fileId}`
     const newFile = new FileSystem.File(bookDir, `${fileId}_${fileName}`)
     console.log("newFile path:", newFile.uri)
     console.log("newFile exists:", newFile.exists)
+
+    if (newFile.exists && newFile.size === totalSize) {
+      console.log("file already fully downloaded, skipping re-download")
+      const alreadyProgress = store.items[key]?.progress ?? 0
+      if (alreadyProgress !== totalSize) {
+        store.setProgress(bookId, fileId, totalSize - alreadyProgress)
+      }
+      return Paths.join(Paths.document, "audiobooks", bookId.toString(), `${fileId}_${fileName}`).toString()
+    }
+
     try {
       if (newFile.exists) {
         console.log("deleting existing file...")
@@ -182,7 +232,7 @@ export class DownloadManager {
       const downloadUrl = `${fileUrlBase}?size=${this.CHUNK_SIZE}&start=${c.start}&end=${c.end}`
 
       try {
-        const res = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } })
+        const res = await fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
         if (!res.ok) throw new Error(`bad status ${res.status}`)
         const arrayBuffer = await res.arrayBuffer()
         const bytes = new Uint8Array(arrayBuffer)
@@ -191,6 +241,7 @@ export class DownloadManager {
 
         store.setProgress(bookId, fileId, bytes.byteLength)
       } catch (err) {
+        if (controller.signal.aborted) throw err
         if (c.retries < this.MAX_RETRIES) {
           c.retries++
           return downloadChunk(c)

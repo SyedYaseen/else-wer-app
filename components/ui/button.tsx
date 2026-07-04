@@ -58,7 +58,7 @@ export function Button({
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor,
-                    opacity: busy ? 0.7 : 1,
+                    opacity: busy ? T.opacity.busy : 1,
                     borderWidth: variant === 'secondary' ? 0.5 : 0,
                     borderColor: T.inkHairline,
                 },

@@ -23,22 +23,32 @@ export function useAudioController() {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  const rewind = () => {
-    if (player.currentTime - 30 > 0) {
-      player.seekTo(player.currentTime - 30);
-    } else {
-      player.seekTo(0);
+  const rewind = async () => {
+    try {
+      const wasPlaying = player.playing;
+      if (player.currentTime - 30 > 0) {
+        await player.seekTo(player.currentTime - 30);
+      } else {
+        await player.seekTo(0);
+      }
+      if (wasPlaying && player.isLoaded) player.play();
+    } catch (e) {
+      console.log(e);
     }
-    player.play();
   };
 
-  const fastForward = () => {
-    if (player.currentTime + 30 < player.duration) {
-      player.seekTo(player.currentTime + 30);
-    } else {
-      player.seekTo(player.duration);
+  const fastForward = async () => {
+    try {
+      const wasPlaying = player.playing;
+      if (player.currentTime + 30 < player.duration) {
+        await player.seekTo(player.currentTime + 30);
+      } else {
+        await player.seekTo(player.duration);
+      }
+      if (wasPlaying && player.isLoaded) player.play();
+    } catch (e) {
+      console.log(e);
     }
-    player.play();
   };
 
   const onPlay = async () => {

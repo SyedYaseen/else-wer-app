@@ -1,20 +1,20 @@
 // components/player/secondary-controls/volume.tsx — Folio
 // ⚠️ Logic unchanged. L&F only.
 
-import React, { useState } from "react";
+import React from "react";
 import { Text, StyleSheet } from "react-native";
 import { useTheme } from '@/theme';
-import { IconButton, BottomSheet } from '@/components/ui';
+import { IconButton, BottomSheet, useDisclosure } from '@/components/ui';
 
 export default function VolumeButton() {
     const T = useTheme();
-    const [show, setShow] = useState(false);
+    const { visible, open, close } = useDisclosure();
 
     return (
         <>
-            <IconButton icon="volume-up" size="xl" tone={T.inkMuted} onPress={() => setShow(true)} />
+            <IconButton icon="volume-up" size="xl" color={T.inkMuted} onPress={open} />
 
-            <BottomSheet visible={show} onClose={() => setShow(false)}>
+            <BottomSheet visible={visible} onClose={close}>
                 <Text style={[styles.sheetTitle, { color: T.ink }]}>Volume</Text>
                 <Text style={[styles.placeholder, { color: T.inkSubtle }]}>Volume slider here</Text>
             </BottomSheet>

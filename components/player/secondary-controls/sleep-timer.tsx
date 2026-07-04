@@ -1,20 +1,20 @@
 // components/player/secondary-controls/sleep-timer.tsx — Folio
 // ⚠️ Logic unchanged. L&F only.
 
-import React, { useState } from "react";
+import React from "react";
 import { Text, StyleSheet } from "react-native";
 import { useTheme } from '@/theme';
-import { IconButton, BottomSheet } from '@/components/ui';
+import { IconButton, BottomSheet, useDisclosure } from '@/components/ui';
 
 export default function SleepTimerButton() {
     const T = useTheme();
-    const [show, setShow] = useState(false);
+    const { visible, open, close } = useDisclosure();
 
     return (
         <>
-            <IconButton icon="access-time" size="xl" tone={T.inkMuted} onPress={() => setShow(true)} />
+            <IconButton icon="access-time" size="xl" color={T.inkMuted} onPress={open} />
 
-            <BottomSheet visible={show} onClose={() => setShow(false)}>
+            <BottomSheet visible={visible} onClose={close}>
                 <Text style={[styles.sheetTitle, { color: T.ink }]}>Sleep timer</Text>
             </BottomSheet>
         </>

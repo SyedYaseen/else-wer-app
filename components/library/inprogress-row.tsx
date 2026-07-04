@@ -47,10 +47,17 @@ function InProgressCard({ book, searchQuery = "" }: InProgressCardProps) {
 
     return (
         <Link
-            href={{
-                pathname: `/player/[id]`,
-                params: { id: book.id, title: book.title, author: book.author },
-            }}
+            href={
+                book.downloaded
+                    ? {
+                        pathname: `/player/[id]`,
+                        params: { id: book.id, title: book.title, author: book.author },
+                    }
+                    : {
+                        pathname: `/book/[id]`,
+                        params: { id: book.id, title: book.title, author: book.author },
+                    }
+            }
             asChild
         >
             <TouchableOpacity
@@ -83,7 +90,7 @@ function InProgressCard({ book, searchQuery = "" }: InProgressCardProps) {
                         text={book.title ?? ""}
                         query={searchQuery}
                         style={[styles.cardTitle, { color: T.ink }]}
-                        highlightColor={T.accent + "33"}
+                        highlightColor={T.accent + T.alpha.muted}
                         highlightTextColor={T.accent}
                     />
                 </View>

@@ -186,7 +186,7 @@ export default function Login() {
           {error ? (
             <View style={[
               styles.errorBox,
-              { backgroundColor: T.danger + '14', borderColor: T.danger + '44' },
+              { backgroundColor: T.danger + T.alpha.faint, borderColor: T.danger + T.alpha.soft },
             ]}>
               <MaterialIcons name="error-outline" size={14} color={T.danger} />
               <Text style={[styles.errorText, { color: T.danger }]}>{error}</Text>

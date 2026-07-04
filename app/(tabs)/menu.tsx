@@ -9,12 +9,11 @@ import {
 } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
 import { getServerBooks, logout, removeAllLocalBooks, scanServerFiles } from '@/data/api/api';
 import { resetDb } from '@/data/database/utils';
 import { upsertAudiobooks } from '@/data/database/audiobook-repo';
 import { useTheme, useThemeToggle, ColorMode } from '@/theme';
-import { ListSection, ListRow, SegmentedControl, SegmentOption, Text } from '@/components/ui';
+import { ListSection, ListRow, SegmentedControl, SegmentOption, Text, IconWell } from '@/components/ui';
 
 // ── Appearance row (label + control stacked inside the card) ──────────────────
 
@@ -40,18 +39,7 @@ function AppearanceRow() {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: T.space.md }}>
-        <View
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: T.radius.sm,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: T.accent + '18',
-          }}
-        >
-          <MaterialIcons name="palette" size={T.icon.md} color={T.accent} />
-        </View>
+        <IconWell icon="palette" tint={T.accent} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: T.font.sans.medium, fontSize: T.font.size.md, color: T.ink, marginBottom: 2 }}>
             Colour scheme

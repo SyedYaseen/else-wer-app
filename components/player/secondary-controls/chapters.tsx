@@ -1,36 +1,34 @@
 // components/player/secondary-controls/chapters.tsx — Folio
 // ⚠️ Logic unchanged. L&F only.
 
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAudioPlayerStore } from "@/components/store/audio-player-store";
 import { FileRow } from "@/data/database/models";
 import { formatTime } from "@/utils/formatTime";
 import { getFileProgressLcl } from "@/data/database/sync-repo";
-import { getFileProgressServer, saveProgress } from "@/data/api/api";
+import { getFileProgressServer, saveProgressSec } from "@/data/api/api";
 import { getFileProgress } from "@/data/lib/conflict-handling";
 import { useTheme } from '@/theme';
-import { IconButton, BottomSheet } from '@/components/ui';
+import { IconButton, BottomSheet, useDisclosure } from '@/components/ui';
 
 const screenHeight = Dimensions.get("window").height;
 
 export default function ChaptersButton() {
     const T = useTheme();
-    const [show, setShow] = useState(false);
+    const { visible, open, close } = useDisclosure();
     const files = useAudioPlayerStore(s => s.files);
 
     return (
         <>
-            <IconButton icon="menu-book" size="xl" tone={T.inkMuted} onPress={() => setShow(true)} />
+            <IconButton icon="menu-book" size="xl" color={T.inkMuted} onPress={open} />
 
             <BottomSheet
-                visible={show}
-                onClose={() => setShow(false)}
+                visible={visible}
+                onClose={close}
                 style={{
                     maxHeight: screenHeight * 0.55,
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
                     paddingHorizontal: 20,
                     paddingTop: 10,
                     paddingBottom: 32,
@@ -72,17 +70,22 @@ const ChapterRow = ({ fileRow }: { fileRow: FileRow }) => {
     const switchChapter = async () => {
         console.log("Switching to ", fileRow.file_name);
         if (fileRow.local_path) {
-            const newQueue = files?.filter(f => f.file_id >= fileRow.file_id);
+            const newQueue = files?.filter(f => f.id >= fileRow.id);
             if (newQueue && newQueue.length > 0) {
                 const currentFile = queue[0];
-                await saveProgress(
+                const currentTime = player?.currentTime ?? 0;
+                const duration = player?.duration ?? 0;
+                // setQueue before the awaits below so app/player/[id].tsx's
+                // queueRef (used by its unmount-save effect) doesn't stay stale
+                // for the duration of the network round trip if unmounted mid-await.
+                setQueue(newQueue);
+                await saveProgressSec(
                     currentFile.book_id,
                     currentFile.id,
-                    player?.currentTime! * 1000,
-                    player?.currentTime! > player?.duration! - 5,
+                    currentTime,
+                    duration,
                 );
                 const pos = await getFileProgress(fileRow.book_id, fileRow.id);
-                setQueue(newQueue);
                 player?.replace(newQueue[0].local_path!);
                 player?.seekTo(pos / 1000);
                 player?.play();
@@ -90,8 +93,8 @@ const ChapterRow = ({ fileRow }: { fileRow: FileRow }) => {
         }
     };
 
-    const isPlayed = current.file_id > fileRow.file_id;
-    const isCurrent = current.file_id === fileRow.file_id;
+    const isPlayed = current.id > fileRow.id;
+    const isCurrent = current.id === fileRow.id;
 
     return (
         <TouchableOpacity style={styles.chapterRow} onPress={switchChapter}>

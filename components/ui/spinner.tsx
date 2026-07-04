@@ -7,12 +7,13 @@ import { useTheme } from '@/theme';
 
 export type SpinnerProps = {
     size?: 'small' | 'large';
-    tone?: string;
+    /** Resolved color value (e.g. `T.accent`), not a semantic tone name — see Pill/Text for that contract. */
+    color?: string;
     containerSize?: number;
     style?: StyleProp<ViewStyle>;
 };
 
-export function Spinner({ size = 'small', tone, containerSize = 40, style }: SpinnerProps) {
+export function Spinner({ size = 'small', color, containerSize = 40, style }: SpinnerProps) {
     const T = useTheme();
     return (
         <View
@@ -21,7 +22,7 @@ export function Spinner({ size = 'small', tone, containerSize = 40, style }: Spi
                 style,
             ]}
         >
-            <ActivityIndicator size={size} color={tone ?? T.accent} />
+            <ActivityIndicator size={size} color={color ?? T.accent} />
         </View>
     );
 }

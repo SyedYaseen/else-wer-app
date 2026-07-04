@@ -15,22 +15,6 @@ export async function saveProgressLcl(bookId: number, fileId: number, progressMs
         );
     } catch (e) { console.error(e) }
 }
-export async function setFileProgressBatch(items: { bookId: number, fileId: number; progressMs: number }[]) {
-    const db = await getDb();
-    await db.withTransactionAsync(async () => {
-        for (const { bookId, fileId, progressMs } of items) {
-            await db.runAsync(
-                `INSERT INTO progress (book_id, file_id, progress_ms, updated_at)
-         VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-         ON CONFLICT(file_id) DO UPDATE SET
-           progress_ms = excluded.progress_ms,
-           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
-                [bookId, fileId, progressMs]
-            );
-        }
-    });
-}
-
 export async function getProgressForBookLcl(bookId: number) {
     const db = await getDb();
     return db.getAllAsync<

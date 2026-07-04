@@ -3,15 +3,17 @@
 
 import { useAudioPlayerStore } from "@/components/store/audio-player-store";
 import React, { useState, useRef } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet, UIManager, findNodeHandle } from "react-native";
+import { View, Text, TouchableOpacity, Modal, StyleSheet, UIManager, findNodeHandle, Dimensions } from "react-native";
 import { useTheme } from '@/theme';
+import { useDisclosure } from '@/components/ui';
 
 const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const screenHeight = Dimensions.get("window").height;
 
 export default function PlaybackSpeedButton() {
     const T = useTheme();
     const [speed, setSpeed] = useState(1);
-    const [showMenu, setShowMenu] = useState(false);
+    const { visible: showMenu, open, close } = useDisclosure();
     const [anchorPos, setAnchorPos] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
     const btnRef = useRef(null);
     const player = useAudioPlayerStore(s => s.player);
@@ -28,14 +30,14 @@ export default function PlaybackSpeedButton() {
         <>
             <TouchableOpacity
                 ref={btnRef}
-                onPress={() => { measureButton(); setShowMenu(true); }}
+                onPress={() => { measureButton(); open(); }}
                 style={styles.iconButton}
             >
                 <Text style={[styles.speedText, { color: T.inkMuted }]}>{speed}x</Text>
             </TouchableOpacity>
 
             <Modal transparent visible={showMenu} animationType="none">
-                <TouchableOpacity style={styles.overlay} onPress={() => setShowMenu(false)} activeOpacity={1}>
+                <TouchableOpacity style={styles.overlay} onPress={close} activeOpacity={1}>
                     {anchorPos && (
                         <View style={[
                             styles.popover,
@@ -44,7 +46,7 @@ export default function PlaybackSpeedButton() {
                                 borderColor: T.inkHairline,
                                 position: 'absolute',
                                 left: anchorPos.x + anchorPos.width / 2 - 50,
-                                bottom: (globalThis?.window?.innerHeight || 800) - anchorPos.y + 8,
+                                bottom: screenHeight - anchorPos.y + 8,
                             },
                         ]}>
                             {speeds.map((s) => (
@@ -58,7 +60,7 @@ export default function PlaybackSpeedButton() {
                                         setSpeed(s);
                                         player!.shouldCorrectPitch = true;
                                         player?.setPlaybackRate(s);
-                                        setShowMenu(false);
+                                        close();
                                     }}
                                 >
                                     <Text style={[

@@ -33,9 +33,9 @@ export function BottomSheet({ visible, onClose, children, style }: BottomSheetPr
                                 backgroundColor: T.surface,
                                 borderTopWidth: 0.5,
                                 borderTopColor: T.inkHairline,
-                                borderTopLeftRadius: T.radius.xl - 4,
-                                borderTopRightRadius: T.radius.xl - 4,
-                                padding: T.space.xl - 4,
+                                borderTopLeftRadius: T.radius.xl,
+                                borderTopRightRadius: T.radius.xl,
+                                padding: T.space.xl,
                             },
                             style,
                         ]}
